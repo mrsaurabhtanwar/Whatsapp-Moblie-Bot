@@ -5,9 +5,13 @@
 
 case "$1" in
     "start")
-        echo "🚀 Starting WhatsApp Bot..."
+        echo "🚀 Starting WhatsApp Bot (Simple Mode)..."
         chmod +x start.sh
         ./start.sh
+        ;;
+    "simple")
+        echo "🚀 Starting Simple WhatsApp Bot..."
+        node simple-bot.js
         ;;
     "pm2-start")
         echo "🚀 Starting WhatsApp Bot with PM2..."
@@ -15,7 +19,7 @@ case "$1" in
             echo "📦 Installing PM2..."
             npm install -g pm2
         fi
-        pm2 start ecosystem.config.js
+        pm2 start simple-bot.js --name whatsapp-bot
         pm2 save
         echo "✅ Bot started with PM2"
         echo "📊 Check status: ./control.sh status"
@@ -95,6 +99,7 @@ case "$1" in
         echo ""
         echo "  ./control.sh install     - Install dependencies"
         echo "  ./control.sh start       - Start bot (simple mode)"
+        echo "  ./control.sh simple      - Start simple bot directly"
         echo "  ./control.sh pm2-start   - Start bot with PM2 (recommended)"
         echo "  ./control.sh stop        - Stop bot"
         echo "  ./control.sh restart     - Restart bot"

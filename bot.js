@@ -13,6 +13,7 @@ class WhatsAppBot {
         this.app.use(express.json({ limit: '10mb' }));
         
         this.sock = null;
+        this.server = null;
         this.isReady = false;
         this.connectionState = 'disconnected';
         this.reconnectAttempts = 0;
@@ -38,7 +39,8 @@ class WhatsAppBot {
         this.force24_7 = process.env.FORCE_24_7 === '1' || process.env.FORCE_24_7 === 'true';
         
         console.log('🚀 Initializing Robust WhatsApp Bot...');
-        this.initialize();
+        // Initialize asynchronously
+        setImmediate(() => this.initialize());
     }
     
     async initialize() {
@@ -470,7 +472,7 @@ class WhatsAppBot {
         for (const testPort of tryPorts) {
             try {
                 await new Promise((resolve, reject) => {
-                    const server = this.app.listen(testPort, '0.0.0.0', () => {
+                    this.server = this.app.listen(testPort, '0.0.0.0', () => {
                         this.port = testPort;
                         serverStarted = true;
                         console.log(`🚀 WhatsApp Bot Server running on port ${this.port}`);
@@ -483,7 +485,7 @@ class WhatsAppBot {
                         resolve();
                     });
                     
-                    server.on('error', (err) => {
+                    this.server.on('error', (err) => {
                         if (err.code === 'EADDRINUSE') {
                             console.log(`⚠️ Port ${testPort} is in use, trying next port...`);
                             reject(err);
@@ -530,6 +532,11 @@ class WhatsAppBot {
                     console.warn('⚠️ Could not cancel job:', name);
                 }
             });
+            
+            // Close server
+            if (this.server) {
+                this.server.close();
+            }
             
             // Logout from WhatsApp
             if (this.sock) {
