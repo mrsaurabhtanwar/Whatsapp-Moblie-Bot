@@ -1,0 +1,38 @@
+{
+  "name": "whatsapp-bot-robust",
+  "version": "1.0.0",
+  "description": "Robust WhatsApp Bot for Termux - Tailor Shop Management",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "node bot.js",
+    "pm2:start": "pm2 start bot.js --name whatsapp-bot",
+    "pm2:stop": "pm2 stop whatsapp-bot",
+    "pm2:restart": "pm2 restart whatsapp-bot",
+    "pm2:logs": "pm2 logs whatsapp-bot",
+    "pm2:status": "pm2 status"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.6.0",
+    "express": "^4.18.2",
+    "qrcode": "^1.5.3",
+    "qrcode-terminal": "^0.12.0",
+    "pino": "^8.16.2",
+    "node-schedule": "^2.1.1",
+    "pm2": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "termux",
+    "android",
+    "tailor",
+    "shop",
+    "management"
+  ],
+  "author": "WhatsApp Bot Developer",
+  "license": "MIT"
+}
