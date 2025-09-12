@@ -69,6 +69,22 @@ case "$1" in
         rm -f qr-code.png
         echo "✅ Session data cleaned"
         ;;
+    "kill-port")
+        echo "🔪 Killing processes on port 3000..."
+        if command -v netstat &> /dev/null; then
+            # Find and kill process using port 3000
+            PID=$(netstat -ano | findstr :3000 | awk '{print $5}' | head -1)
+            if [ ! -z "$PID" ]; then
+                echo "🔪 Killing process $PID on port 3000..."
+                taskkill /PID $PID /F
+                echo "✅ Process killed"
+            else
+                echo "✅ No process found on port 3000"
+            fi
+        else
+            echo "❌ netstat not available. Please kill processes manually."
+        fi
+        ;;
     "expose")
         echo "🌐 Exposing bot to internet for QR sharing..."
         chmod +x expose-simple.sh
@@ -85,6 +101,7 @@ case "$1" in
         echo "  ./control.sh status      - Check bot status"
         echo "  ./control.sh logs        - View bot logs"
         echo "  ./control.sh clean       - Clean session data"
+        echo "  ./control.sh kill-port   - Kill processes on port 3000"
         echo "  ./control.sh expose      - Expose bot to internet (for QR sharing)"
         echo "  ./control.sh help        - Show this help"
         echo ""

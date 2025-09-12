@@ -53,7 +53,7 @@ class WhatsAppBot {
             this.setupScheduler();
             
             // Start server
-            this.startServer();
+            await this.startServer();
             
             // Setup graceful shutdown
             this.setupGracefulShutdown();
@@ -463,16 +463,48 @@ class WhatsAppBot {
         }
     }
     
-    startServer() {
-        this.app.listen(this.port, '0.0.0.0', () => {
-            console.log(`🚀 WhatsApp Bot Server running on port ${this.port}`);
-            console.log(`📱 WhatsApp Status: ${this.isReady ? 'Ready' : 'Initializing...'}`);
-            console.log(`🏪 Shop Hours: ${this.shopHours.start} - ${this.shopHours.end} (${this.shopHours.timezone})`);
-            console.log(`🕐 Current Status: ${this.isShopOpen() ? 'OPEN' : 'CLOSED'}`);
-            console.log(`🔗 Health check: http://0.0.0.0:${this.port}/`);
-            console.log(`📷 QR Code: http://0.0.0.0:${this.port}/qr`);
-            console.log(`🤖 Bot optimized for Termux (Robust & Stable)`);
-        });
+    async startServer() {
+        const tryPorts = [3000, 3001, 3002, 3003, 3004, 3005];
+        let serverStarted = false;
+        
+        for (const testPort of tryPorts) {
+            try {
+                await new Promise((resolve, reject) => {
+                    const server = this.app.listen(testPort, '0.0.0.0', () => {
+                        this.port = testPort;
+                        serverStarted = true;
+                        console.log(`🚀 WhatsApp Bot Server running on port ${this.port}`);
+                        console.log(`📱 WhatsApp Status: ${this.isReady ? 'Ready' : 'Initializing...'}`);
+                        console.log(`🏪 Shop Hours: ${this.shopHours.start} - ${this.shopHours.end} (${this.shopHours.timezone})`);
+                        console.log(`🕐 Current Status: ${this.isShopOpen() ? 'OPEN' : 'CLOSED'}`);
+                        console.log(`🔗 Health check: http://0.0.0.0:${this.port}/`);
+                        console.log(`📷 QR Code: http://0.0.0.0:${this.port}/qr`);
+                        console.log(`🤖 Bot optimized for Termux (Robust & Stable)`);
+                        resolve();
+                    });
+                    
+                    server.on('error', (err) => {
+                        if (err.code === 'EADDRINUSE') {
+                            console.log(`⚠️ Port ${testPort} is in use, trying next port...`);
+                            reject(err);
+                        } else {
+                            reject(err);
+                        }
+                    });
+                });
+                break;
+            } catch (error) {
+                if (error.code === 'EADDRINUSE') {
+                    continue; // Try next port
+                } else {
+                    throw error; // Re-throw other errors
+                }
+            }
+        }
+        
+        if (!serverStarted) {
+            throw new Error(`❌ Could not start server. All ports ${tryPorts.join(', ')} are in use.`);
+        }
     }
     
     setupGracefulShutdown() {

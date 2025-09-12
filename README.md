@@ -18,7 +18,7 @@ A powerful, robust WhatsApp bot designed specifically for Termux/Android devices
 ### 1. Install Dependencies
 ```bash
 # Update Termux
-pkg update && pkg upgrade
+./control.sh install
 
 # Install Node.js and npm
 pkg install nodejs npm
@@ -44,7 +44,7 @@ chmod +x control.sh start.sh
 # OR start simple mode
 ./control.sh start
 ```
-
+pme 
 ### 4. Login to WhatsApp
 **Option A - Local Access:**
 1. Open browser: `http://localhost:3000/qr`
