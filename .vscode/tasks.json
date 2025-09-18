@@ -1,0 +1,15 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run WhatsApp bot in mock mode",
+			"type": "shell",
+			"command": "$env:MOCK_WHATSAPP='true'; $env:DISABLE_POLLING='true'; node worker.js",
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		}
+	]
+}

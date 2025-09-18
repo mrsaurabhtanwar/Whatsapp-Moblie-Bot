@@ -1,257 +1,770 @@
-# 🤖 WhatsApp Bot - Robust & Simple
+# 🤖 WhatsApp Sheet Bot
 
-A powerful, robust WhatsApp bot designed specifically for Termux/Android devices. Perfect for tailor shop management, order notifications, and customer communication.
+A self-hosted WhatsApp notification bot that polls Google Sheets for orders marked "Ready" and sends messages via Baileys (WhatsApp Web). The bot runs on your PC, persists authentication to disk (so QR scan is done only once), queues work, retries on failures, updates the sheet after send, and allows your brother to approve or manually trigger sends via WhatsApp messages.
 
 ## ✨ Features
 
-- 📱 **Termux Optimized**: Built specifically for Android/Termux
-- 🔄 **Auto-Reconnect**: Handles disconnections gracefully
-- 🏪 **Shop Hours**: Configurable business hours (10 AM - 9 PM)
-- 💬 **Auto-Reply**: Smart responses to common queries
-- 📊 **Statistics**: Track messages sent/received
-- 🛡️ **Robust**: Handles network issues and session management
-- 🌐 **Web Interface**: Health checks, QR code, and statistics
-- 📨 **Webhook Support**: Order-ready notifications
+### 🎯 Core Functionality
+- **Google Sheets Integration**: Polls sheets for orders with "Ready" status
+- **WhatsApp Notifications**: Sends messages via Baileys (WhatsApp Web API)
+- **Persistent Authentication**: Saves WhatsApp session to disk (QR scan once)
+- **Queue Management**: Redis or in-memory job queue with retry logic
+- **Multiple Modes**: AUTO, APPROVAL, and MANUAL operation modes
+- **Admin Commands**: Brother can approve/manage via WhatsApp messages
 
-## 🚀 Quick Start for Termux
+### 🔄 Operation Modes
+- **AUTO**: Automatically sends notifications when orders are marked "Ready"
+- **APPROVAL**: Sends approval request to admin before sending notifications
+- **MANUAL**: Only sends when manually triggered by admin commands
 
-### 1. Install Dependencies
+### 🛡️ Reliability Features
+- **Auto-Reconnect**: Handles WhatsApp disconnections gracefully
+- **Retry Logic**: Configurable retries with exponential backoff
+- **Queue Persistence**: Jobs survive bot restarts (with Redis)
+- **Error Handling**: Comprehensive logging and error recovery
+- **Health Monitoring**: Built-in health checks and status endpoints
+
+## 🚀 Quick Start
+
+### Prerequisites
+- **Node.js 18+** installed
+- **Google Service Account** JSON file
+- **Google Sheet** shared with service account email
+- **Redis** (optional, but recommended for production)
+
+### 1. Installation
+
 ```bash
-# Update Termux
-./control.sh install
+# Clone or download the project
+cd whatsapp-sheet-bot
 
-# Install Node.js and npm
-pkg install nodejs npm
+# Quick setup (automated)
+npm run setup
 
-# Install git (if needed)
-pkg install git
+# Or manual setup
+npm install
+copy .env.example .env
 ```
 
-### 2. Setup Bot
-```bash
-# Make scripts executable
-chmod +x control.sh start.sh
+### 2. One-Click Deployment
 
-# Install bot dependencies
-./control.sh install
+```bash
+# For production deployment
+npm run deploy
+
+# For monitoring and maintenance
+npm run monitor
 ```
 
-### 3. Start Bot
-```bash
-# Start with PM2 (recommended for 24/7 operation)
-./control.sh pm2-start
+### 3. Configuration
 
-# OR start simple mode
-./control.sh start
-```
-pme 
-### 4. Login to WhatsApp
-**Option A - Local Access:**
-1. Open browser: `http://localhost:3000/qr`
-2. Scan QR code with WhatsApp
+#### Google Sheets Setup
+1. Create a Google Service Account:
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project or select existing
+   - Enable Google Sheets API
+   - Create Service Account credentials
+   - Download the JSON key file
 
-**Option B - Share QR Code (Internet Access):**
-1. Run: `./control.sh expose`
-2. Choose option 1 (ngrok) or 2 (serveo)
-3. Share the HTTPS URL with anyone
-4. QR Code will be at: `https://your-url.ngrok.io/qr`
+2. Place the service account JSON file as `service-account.json` in the project root
 
-Wait for "✅ WhatsApp connected successfully!" message
+3. Share your Google Sheet with the service account email
 
-## 📱 Simple Commands
+#### Environment Configuration
+Edit `.env` file with your settings:
 
-| Command | Description |
-|---------|-------------|
-| `./control.sh install` | Install all dependencies |
-| `./control.sh pm2-start` | Start bot with PM2 (24/7) |
-| `./control.sh start` | Start bot in simple mode |
-| `./control.sh stop` | Stop the bot |
-| `./control.sh restart` | Restart the bot |
-| `./control.sh status` | Check bot status |
-| `./control.sh logs` | View bot logs |
-| `./control.sh clean` | Clean session data |
-| `./control.sh expose` | Expose bot to internet (for QR sharing) |
-| `./control.sh help` | Show all commands |
+```env
+# Google Sheets Configuration
+GOOGLE_SHEET_ID=your_google_sheet_id_here
+GOOGLE_SHEET_NAME=Sheet1
+GOOGLE_SHEET_RANGE=A:Z
 
-## 🌐 Web Interface
+# WhatsApp Configuration
+WHATSAPP_ADMIN_PHONE=1234567890
+WHATSAPP_ADMIN_NAME=Admin
 
-Once the bot is running, access these URLs:
+# Bot Operation Mode (AUTO, APPROVAL, MANUAL)
+BOT_MODE=AUTO
 
-- **Health Check**: `http://localhost:3000/`
-- **QR Code**: `http://localhost:3000/qr`
-- **Statistics**: `http://localhost:3000/stats`
+# Queue Configuration (optional)
+REDIS_URL=redis://localhost:6379
 
-## 🌍 Expose Bot to Internet (QR Sharing)
+# Polling Configuration
+POLL_INTERVAL_SECONDS=30
+BATCH_SIZE=10
 
-To share the QR code with others or access it remotely:
+# Notification Settings
+SEND_ADMIN_CONFIRMATION=true
+ADMIN_CONFIRMATION_DELAY_SECONDS=5
 
-### Quick Method:
-```bash
-./control.sh expose
+# Retry Configuration
+MAX_RETRIES=3
+RETRY_DELAY_SECONDS=30
 ```
 
-### Available Options:
-1. **ngrok** (Recommended) - Professional tunneling service
-2. **serveo.net** - No installation needed, uses SSH
-3. **localtunnel** - npm package for tunneling
+### 3. Google Sheet Format
 
-### Example URLs:
-- **ngrok**: `https://abc123.ngrok.io/qr`
-- **serveo**: `https://abc123.serveo.net/qr`
-- **localtunnel**: `https://abc123.loca.lt/qr`
+Your Google Sheet should have these columns:
+- `id` or `orderId`: Unique order identifier
+- `status`: Order status (bot looks for "Ready")
+- `notifiedFlag`: Notification status (bot sets to "Yes" after sending)
+- `phone` or `customerPhone`: Customer WhatsApp number
+- `customerName` or `name`: Customer name (optional)
+- `garment_type` or `item`: Type of garment/item
+- `total_amount` or `total`: Total order amount
+- `advance_amount` or `advance`: Advance payment received
+- `remaining_amount` or `remaining`: Remaining payment
+- `delivery_date` or `expected_delivery`: Expected delivery date
+- `ready_date`: When order was completed
+- `notifiedAt`: Timestamp when notified (auto-filled)
+- `notifiedBy`: Who sent the notification (auto-filled)
 
-### Setup ngrok (Optional):
+Example sheet structure:
+| id | customerName | phone | garment_type | total_amount | advance_amount | remaining_amount | status | notifiedFlag | notifiedAt | notifiedBy |
+|----|--------------|-------|--------------|--------------|----------------|------------------|--------|--------------|------------|------------|
+| 12345 | John Doe | 1234567890 | Shirt | 1500 | 500 | 1000 | Ready | | | |
+
+### 4. Running the Bot
+
+#### Development Mode
 ```bash
-# Install ngrok for better performance
-chmod +x setup-ngrok.sh
-./setup-ngrok.sh
+npm start
 ```
 
-## 📨 API Endpoints
-
-### Send Message
+#### Production Mode (with PM2)
 ```bash
-curl -X POST http://localhost:3000/send \
-  -H "Content-Type: application/json" \
-  -d '{"phone": "1234567890", "message": "Hello from bot!"}'
+npm run pm2:start
 ```
 
-### Order Ready Webhook
+#### Windows (using batch scripts)
+```batch
+# Install dependencies
+control.bat install
+
+# Start with PM2
+control.bat pm2-start
+
+# Share QR code online
+control.bat expose
+```
+
+### 5. WhatsApp Authentication
+
+1. **Access QR Code**:
+   - Local: `http://localhost:3000/qr`
+   - Online: Run `control.bat expose` and use the provided URL
+
+2. **Scan QR Code** with WhatsApp mobile app
+
+3. **Wait for Connection**: Bot will show "WhatsApp connected successfully!"
+
+## 📱 Admin Commands
+
+Your brother can send these commands via WhatsApp to the admin number:
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `APPROVE #ORDER_ID` | Approve a pending order | `APPROVE #12345` |
+| `SEND #ORDER_ID` | Manually send notification | `SEND #12345` |
+| `STATUS` | Show bot status | `STATUS` |
+| `ORDERS` | Show recent orders | `ORDERS` |
+| `QUEUE` | Show queue statistics | `QUEUE` |
+| `RESTART` | Restart WhatsApp connection | `RESTART` |
+| `HELP` | Show all commands | `HELP` |
+
+## 📝 Message Templates
+
+The bot uses professional message templates in both Hindi and English for different types of notifications:
+
+### Template Types
+- **Order Ready**: Notifies customers when their order is ready for pickup
+- **Payment Reminder**: Reminds customers about pending payments
+- **Welcome Message**: Sent to new customers
+- **Pickup Reminder**: Follow-up reminder for uncollected orders
+- **Order Confirmation**: Confirms order placement
+- **Pickup Complete**: Confirmation when order is collected
+
+### Template Configuration
+Configure templates in your `.env` file:
+
+```env
+# Message Templates Configuration
+DEFAULT_LANGUAGE=hindi
+SHOP_NAME=RS Tailor & Fabric
+SHOP_PHONE=9876543210
+SHOP_ADDRESS=Main Street, City
+BUSINESS_HOURS=10:00 AM - 7:00 PM
+```
+
+### Template Variables
+Templates support dynamic variables that are replaced with actual data:
+- `{customer_name}` - Customer's name
+- `{order_id}` - Order identifier
+- `{garment_type}` - Type of garment
+- `{total_amount}` - Total order amount
+- `{advance_amount}` - Advance payment
+- `{remaining_amount}` - Remaining payment
+- `{ready_date}` - Order completion date
+- `{shop_name}` - Your shop name
+- `{shop_phone}` - Shop contact number
+- `{business_hours}` - Operating hours
+
+### Example Templates
+
+**Order Ready (Hindi):**
+```
+🎉 आपका Order तैयार है ! 🎉
+
+नमस्ते *John Doe* जी 🙏
+
+आपका Shirt बिल्कुल ready है ! ✨
+📋 Order ID: 12345
+📅 तैयार हुआ: 15 January 2024
+
+💰 Payment Details:
+- कुल Amount: ₹1500
+- Advance जमा: ₹500
+- बाकी Amount: ₹1000
+
+🏪 Pickup Your Order:
+- Shop time: 10:00 AM - 7:00 PM
+- आज ही आकर ले जाएं !
+
+RS Tailor & Fabric 😊
+Phone: 9876543210
+
+⭐ आपका भरोसा हमारे लिए सबकुछ है ! Thank You !
+```
+
+**Order Ready (English):**
+```
+✅ *Your Order is Ready!*
+
+Hello *John Doe*,
+
+Great news! Your order *12345* is ready for pickup! 
+
+📦 *Ready Items:*
+• Order ID: 12345
+• Garment Type: Shirt
+• Ready Date: 15 January 2024
+
+🏪 *Pickup Details:*
+• Shop: RS Tailor & Fabric
+• Address: Main Street, City
+• Contact: 9876543210
+
+Please visit us during business hours to collect your order. We look forward to seeing you! 😊
+
+Best regards,
+RS Tailor & Fabric
+```
+
+### Customizing Templates
+
+You can customize message templates by modifying the `message-templates.js` file:
+
+1. **Add New Template Types:**
+```javascript
+// Add to templates object in MessageTemplates class
+custom_notification_hindi: `Your custom message in Hindi with {variables}`,
+custom_notification_english: `Your custom message in English with {variables}`
+```
+
+2. **Update Existing Templates:**
+```javascript
+// Modify existing templates in the templates object
+order_ready_hindi: `Your updated template with {customer_name} and {order_id}`
+```
+
+3. **Add New Template Methods:**
+```javascript
+// Add new methods to MessageTemplates class
+getCustomNotificationMessage(data, language = null) {
+    return this.formatTemplate('custom_notification', data, language);
+}
+```
+
+4. **Use Custom Templates in WhatsApp Client:**
+```javascript
+// Add new methods to WhatsAppClient class
+async sendCustomNotification(customerPhone, orderData) {
+    const templateData = { /* your data */ };
+    const message = this.templates.getCustomNotificationMessage(templateData);
+    return await this.sendMessage(customerPhone, message);
+}
+```
+
+### Template Testing
+
+Use the API endpoints to test your templates:
+
 ```bash
-curl -X POST http://localhost:3000/webhook/order-ready \
+# Test template preview
+curl -X POST http://localhost:3000/templates/preview \
   -H "Content-Type: application/json" \
   -d '{
-    "customerPhone": "1234567890",
-    "message": "Your order is ready for pickup!",
-    "orderId": "ORD-123"
+    "templateType": "your_template_type",
+    "language": "hindi",
+    "data": { /* test data */ }
+  }'
+
+# Send test message
+curl -X POST http://localhost:3000/templates/test \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerPhone": "test_phone",
+    "templateType": "your_template_type",
+    "data": { /* test data */ }
   }'
 ```
 
-## ⚙️ Configuration
+## 🔧 Configuration Details
 
-### Environment Variables
-```bash
-# Enable 24/7 mode (bypass shop hours)
-export FORCE_24_7=true
+### Bot Modes
 
-# Set custom port
-export PORT=3000
+#### AUTO Mode
+- Automatically sends notifications when orders are marked "Ready"
+- No manual intervention required
+- Best for high-volume, automated operations
+
+#### APPROVAL Mode
+- Sends approval request to admin for each "Ready" order
+- Admin must reply with `APPROVE #ORDER_ID` to send notification
+- Good for quality control and manual oversight
+
+#### MANUAL Mode
+- Only sends notifications when manually triggered
+- Admin sends `SEND #ORDER_ID` to trigger specific orders
+- Perfect for low-volume or on-demand operations
+
+### Queue Configuration
+
+#### With Redis (Recommended)
+```env
+REDIS_URL=redis://localhost:6379
+```
+- Jobs persist across bot restarts
+- Better performance for high volume
+- Multiple bot instances support
+
+#### Without Redis (In-Memory)
+- Remove or comment out `REDIS_URL`
+- Jobs are lost on bot restart
+- Simpler setup, good for testing
+
+### Polling Configuration
+```env
+POLL_INTERVAL_SECONDS=30  # How often to check for new orders
+BATCH_SIZE=10             # Process orders in batches
 ```
 
-### Shop Hours
-The bot operates during shop hours (10 AM - 9 PM) by default. To run 24/7:
-```bash
-export FORCE_24_7=true
-./control.sh restart
+### Retry Configuration
+```env
+MAX_RETRIES=3              # Maximum retry attempts
+RETRY_DELAY_SECONDS=30     # Delay between retries
+BACKOFF_MULTIPLIER=2       # Exponential backoff multiplier
 ```
 
-## 🔧 Troubleshooting
+## 🌐 API Endpoints
 
-### Bot Not Connecting
+The bot provides several HTTP endpoints for monitoring and control:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Health check and status |
+| `/qr` | GET | WhatsApp QR code |
+| `/trigger` | POST | Manually trigger polling |
+| `/queue` | GET | Queue statistics |
+| `/templates` | GET | List available templates |
+| `/templates/preview` | POST | Preview template with data |
+| `/templates/test` | POST | Send test template message |
+
+### Example API Usage
+
 ```bash
-# Clean session and restart
-./control.sh clean
-./control.sh restart
+# Check bot status
+curl http://localhost:3000/
+
+# Get QR code
+curl http://localhost:3000/qr
+
+# Trigger manual polling
+curl -X POST http://localhost:3000/trigger
+
+# Get queue stats
+curl http://localhost:3000/queue
+
+# List available templates
+curl http://localhost:3000/templates
+
+# Preview template with sample data
+curl -X POST http://localhost:3000/templates/preview \
+  -H "Content-Type: application/json" \
+  -d '{
+    "templateType": "order_ready",
+    "language": "hindi",
+    "data": {
+      "customer_name": "John Doe",
+      "order_id": "12345",
+      "garment_type": "Shirt",
+      "total_amount": "1500",
+      "advance_amount": "500",
+      "remaining_amount": "1000"
+    }
+  }'
+
+# Send test template message
+curl -X POST http://localhost:3000/templates/test \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerPhone": "1234567890",
+    "templateType": "order_ready",
+    "language": "hindi",
+    "data": {
+      "customer_name": "John Doe",
+      "order_id": "12345",
+      "garment_type": "Shirt"
+    }
+  }'
 ```
 
-### Check Bot Status
-```bash
-# View status
-./control.sh status
+## 📊 Monitoring & Logs
 
+### Log Files
+- `./logs/bot.log` - Application logs
+- `./logs/out.log` - PM2 output logs
+- `./logs/err.log` - PM2 error logs
+- `./logs/combined.log` - Combined PM2 logs
+
+### PM2 Commands
+```bash
 # View logs
-./control.sh logs
+npm run pm2:logs
+
+# Check status
+npm run pm2:status
+
+# Restart bot
+npm run pm2:restart
+
+# Stop bot
+npm run pm2:stop
+```
+
+### Health Monitoring
+```bash
+# Check if bot is running
+curl http://localhost:3000/
+
+# Response includes:
+# - WhatsApp connection status
+# - Google Sheets connection status
+# - Queue statistics
+# - Polling status
+# - Current bot mode
+```
+
+## 🔒 Security Considerations
+
+### Service Account Security
+- Keep `service-account.json` secure and never commit to version control
+- Use environment variables for sensitive configuration
+- Regularly rotate service account keys
+
+### WhatsApp Security
+- Authentication is stored in `./baileys_auth/` directory
+- Keep this directory secure and backed up
+- The bot uses official WhatsApp Web protocol
+
+### Network Security
+- Bot runs on localhost by default
+- Use reverse proxy (nginx) for external access
+- Consider VPN for remote administration
+
+## 🛠️ Troubleshooting
+
+### Common Issues
+
+#### Bot Not Connecting to WhatsApp
+```bash
+# Clean authentication and restart
+rm -rf ./baileys_auth
+npm run pm2:restart
+```
+
+#### Google Sheets Access Denied
+1. Verify service account JSON file is in project root
+2. Check that sheet is shared with service account email
+3. Ensure Google Sheets API is enabled
+
+#### Queue Jobs Not Processing
+```bash
+# Check Redis connection
+redis-cli ping
+
+# View queue statistics
+curl http://localhost:3000/queue
+
+# Check logs for errors
+npm run pm2:logs
+```
+
+#### Orders Not Being Detected
+1. Verify sheet column names match configuration
+2. Check that orders have `status = "Ready"`
+3. Ensure `notifiedFlag` is not "Yes"
+4. Test with manual trigger: `curl -X POST http://localhost:3000/trigger`
+
+### Debug Mode
+```bash
+# Enable debug logging
+export LOG_LEVEL=debug
+npm start
 ```
 
 ### Reset Everything
 ```bash
 # Stop bot
-./control.sh stop
+npm run pm2:stop
 
-# Clean everything
-./control.sh clean
+# Clean authentication
+rm -rf ./baileys_auth
+
+# Clean logs
+rm -rf ./logs
+
+# Reinstall dependencies
 rm -rf node_modules
+npm install
 
-# Reinstall and start
-./control.sh install
-./control.sh pm2-start
+# Restart
+npm run pm2:start
 ```
-
-## 📊 Monitoring
-
-### Check Statistics
-```bash
-curl http://localhost:3000/stats
-```
-
-### Health Check
-```bash
-curl http://localhost:3000/
-```
-
-## 🛡️ Security Features
-
-- **Session Persistence**: Survives restarts and network issues
-- **Auto-Reconnect**: Handles disconnections gracefully
-- **Phone Verification**: Verifies numbers before sending messages
-- **Rate Limiting**: Built-in protection against spam
-- **Error Handling**: Comprehensive error handling and logging
 
 ## 📁 Project Structure
 
 ```
-├── bot.js                 # Main bot application
-├── package.json           # Dependencies
-├── ecosystem.config.js    # PM2 configuration
-├── control.sh            # Control script
-├── start.sh              # Startup script
-├── README.md             # This file
-├── whatsapp-sessions/    # WhatsApp session data
-└── logs/                 # Log files
+whatsapp-sheet-bot/
+├── worker.js                 # Main application file
+├── sheets.js                 # Google Sheets helper
+├── whatsapp-client-baileys.js # WhatsApp client wrapper
+├── admin-commands.js         # Admin command handlers
+├── package.json              # Dependencies and scripts
+├── ecosystem.config.js       # PM2 configuration
+├── .env.example             # Environment configuration template
+├── service-account.json     # Google service account (user-provided)
+├── README.md                # This file
+├── logs/                    # Log files
+├── baileys_auth/           # WhatsApp authentication data
+└── control.bat             # Windows control script
 ```
 
-## 🎯 Use Cases
+## 🚀 Deployment Options
 
-- **Tailor Shop**: Order notifications, pickup reminders
-- **Restaurant**: Order ready notifications
-- **Service Business**: Appointment reminders
-- **E-commerce**: Order status updates
-- **Customer Support**: Automated responses
-
-## 📱 Termux Tips
-
-1. **Keep Termux Running**: Use `termux-wake-lock` to prevent sleep
-2. **Background Operation**: Use PM2 for 24/7 operation
-3. **Network**: Ensure stable internet connection
-4. **Battery**: Keep device charged for continuous operation
-
-## 🔄 Auto-Start on Boot
-
-To start the bot automatically when Termux starts:
-
+### Local Development
 ```bash
-# Create startup script
-echo 'cd /path/to/your/bot && ./control.sh pm2-start' > ~/.termux/boot/start-bot.sh
-chmod +x ~/.termux/boot/start-bot.sh
+npm start
 ```
 
-## 📞 Support
+### Production with PM2
+```bash
+npm run pm2:start
+```
 
-If you encounter any issues:
+### Docker (Optional)
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+EXPOSE 3000
+CMD ["npm", "start"]
+```
 
-1. Check the logs: `./control.sh logs`
-2. Verify status: `./control.sh status`
-3. Clean and restart: `./control.sh clean && ./control.sh restart`
-4. Check network connection
-5. Ensure WhatsApp is working on your phone
+### Systemd Service (Linux)
+```ini
+[Unit]
+Description=WhatsApp Sheet Bot
+After=network.target
+
+[Service]
+Type=simple
+User=youruser
+WorkingDirectory=/home/youruser/whatsapp-sheet-bot
+ExecStart=/usr/bin/node worker.js
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📄 License
+
+MIT License - see LICENSE file for details
+
+## 🆘 Support
+
+If you encounter issues:
+
+1. Check the logs: `npm run pm2:logs`
+2. Verify configuration in `.env`
+3. Test Google Sheets access manually
+4. Check WhatsApp connection status
+5. Review troubleshooting section above
 
 ## 🎉 Success!
 
-Your WhatsApp bot is now running! 
+Once everything is set up, your bot will:
 
-- ✅ **Connected**: Bot is connected to WhatsApp
-- ✅ **24/7 Ready**: Can run continuously with PM2
-- ✅ **Web Interface**: Access health checks and QR code
-- ✅ **API Ready**: Send messages via webhook or API
+- ✅ Poll Google Sheets every 30 seconds (configurable)
+- ✅ Detect orders marked "Ready" with `notifiedFlag ≠ "Yes"`
+- ✅ Queue notification jobs with retry logic
+- ✅ Send WhatsApp messages via Baileys
+- ✅ Update sheet with notification status
+- ✅ Handle admin commands via WhatsApp
+- ✅ Provide health monitoring endpoints
+- ✅ Persist authentication across restarts
+- ✅ Run 24/7 with PM2 process management
 
-**Happy Botting! 🤖📱**
+## 🚀 Production Deployment
+
+### Automated Deployment Scripts
+
+We've created several scripts to make deployment easy:
+
+#### 1. Quick Setup
+```bash
+# Automated setup and dependency installation
+npm run setup
+```
+
+#### 2. Production Deployment
+```bash
+# Deploy with PM2 for production
+npm run deploy
+```
+
+#### 3. Monitoring & Maintenance
+```bash
+# Interactive monitoring dashboard
+npm run monitor
+```
+
+### Manual Deployment Steps
+
+#### Step 1: Environment Setup
+1. **Install Node.js 18+** from [nodejs.org](https://nodejs.org/)
+2. **Install dependencies**: `npm install`
+3. **Configure environment**: Edit `.env` file
+4. **Add service account**: Place `service-account.json` in project root
+
+#### Step 2: Google Sheets Setup
+1. **Create Google Cloud Project**
+2. **Enable Google Sheets API**
+3. **Create Service Account** and download JSON key
+4. **Create Google Sheet** with required columns
+5. **Share sheet** with service account email
+
+#### Step 3: WhatsApp Authentication
+1. **Start bot**: `npm start`
+2. **Scan QR code**: Visit `http://localhost:3000/qr`
+3. **Wait for connection**: "WhatsApp connected successfully!"
+
+#### Step 4: Production Setup
+1. **Install PM2**: `npm install -g pm2`
+2. **Start with PM2**: `npm run pm2:start`
+3. **Save configuration**: `pm2 save`
+4. **Enable auto-start**: `pm2 startup`
+
+### Long-Term Reliability
+
+#### Auto-Start Configuration
+```bash
+# Save PM2 processes
+pm2 save
+
+# Generate startup script
+pm2 startup
+
+# Follow instructions (run as Administrator)
+```
+
+#### Monitoring Commands
+```bash
+# Check bot status
+npm run pm2:status
+
+# View logs
+npm run pm2:logs
+
+# Check health
+npm run health
+
+# Check queue
+npm run queue
+
+# View templates
+npm run templates
+```
+
+#### Maintenance Schedule
+- **Daily**: Check bot status with `npm run pm2:status`
+- **Weekly**: Restart bot with `npm run pm2:restart`
+- **Monthly**: Update dependencies and clean logs
+
+### Troubleshooting
+
+#### Common Issues
+1. **Bot not connecting**: Clean auth with `rmdir /s /q baileys_auth`
+2. **Google Sheets access denied**: Verify service account and sheet sharing
+3. **Bot stops working**: Check logs with `npm run pm2:logs`
+4. **Memory issues**: Restart with `npm run pm2:restart`
+
+#### Emergency Commands
+```bash
+# Stop bot
+npm run pm2:stop
+
+# Clean restart
+npm run pm2:stop
+rmdir /s /q baileys_auth
+npm run pm2:start
+
+# View error logs only
+pm2 logs whatsapp-sheet-bot --err
+```
+
+### Performance Optimization
+
+#### For High Volume (100+ orders/day)
+- Enable Redis: Set `REDIS_URL=redis://localhost:6379`
+- Increase batch size: `BATCH_SIZE=20`
+- Reduce polling: `POLL_INTERVAL_SECONDS=15`
+
+#### For Low Volume (< 50 orders/day)
+- Use in-memory queue: Remove `REDIS_URL`
+- Increase polling: `POLL_INTERVAL_SECONDS=60`
+- Smaller batches: `BATCH_SIZE=5`
+
+---
+
+## 📚 Additional Resources
+
+- **DEPLOYMENT-GUIDE.md** - Detailed deployment instructions
+- **Quick Setup**: `npm run setup`
+- **Production Deploy**: `npm run deploy`
+- **Monitor Bot**: `npm run monitor`
+
+**Happy Botting! 🤖📱📊**
