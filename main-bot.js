@@ -4,7 +4,7 @@ const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
 const PQueue = require('p-queue').default;
-const WhatsAppClient = require('./whatsapp-client');
+const EnhancedWhatsAppClient = require('./enhanced-whatsapp-client');
 const MessageTemplates = require('./message-templates');
 const AdminCommands = require('./admin-commands');
 
@@ -27,7 +27,7 @@ class WhatsAppTailorBot {
         this.isConnected = false;
         
         // Message sending limits and cooldowns
-        this.maxMessagesPerCustomer = 3; // Max messages per customer per day
+        this.maxMessagesPerCustomer = 5; // Max messages per customer per day
         this.messageCooldown = 300000; // 5 minutes between messages to same customer
         this.duplicateCheckWindow = 24 * 60 * 60 * 1000; // 24 hours
         
@@ -41,7 +41,7 @@ class WhatsAppTailorBot {
             {
                 id: process.env.FABRIC_SHEET_ID || '1tFb4EBzzvdmDNY0bOtyTXAhX1aRqzfq7NzXLhDqYj0o',
                 name: 'Fabric Orders',
-                type: 'fabric-orders'
+                type: 'fabric'
             },
             {
                 id: process.env.COMBINED_SHEET_ID || '199mFt3yz1cZQUGcF84pZgNQoxCpOS2gHxFGDD71CZVg',
@@ -288,6 +288,104 @@ class WhatsAppTailorBot {
 </body>
 </html>`;
             res.send(dashboardHtml);
+        });
+
+        // QR Code endpoint
+        this.app.get('/qr', async (req, res) => {
+            const qrCode = this.whatsappClient?.qrCode;
+            if (qrCode) {
+                try {
+                    const QRCode = require('qrcode');
+                    const qrDataUrl = await QRCode.toDataURL(qrCode);
+                    res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WhatsApp QR Code</title>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
+        .qr-container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: inline-block; }
+        .qr-code { max-width: 300px; margin: 20px auto; }
+        h1 { color: #333; }
+        p { color: #666; margin: 20px 0; }
+        .instructions { text-align: left; max-width: 300px; margin: 0 auto; }
+    </style>
+</head>
+<body>
+    <div class="qr-container">
+        <h1>📱 WhatsApp QR Code</h1>
+        <p>Scan this QR code with your WhatsApp mobile app to connect the bot:</p>
+        <div class="qr-code">
+            <img src="${qrDataUrl}" alt="WhatsApp QR Code" style="max-width: 100%; height: auto;">
+        </div>
+        <div class="instructions">
+            <p><strong>Steps:</strong></p>
+            <p>1. Open WhatsApp on your phone</p>
+            <p>2. Tap Menu → Linked Devices</p>
+            <p>3. Tap "Link a Device"</p>
+            <p>4. Scan this QR code</p>
+        </div>
+        <p><a href="/">← Back to Dashboard</a></p>
+    </div>
+</body>
+</html>
+                    `);
+                } catch (error) {
+                    res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WhatsApp QR Code</title>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
+        .qr-container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: inline-block; }
+        h1 { color: #333; }
+        p { color: #666; margin: 20px 0; }
+        .error { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="qr-container">
+        <h1>📱 WhatsApp QR Code</h1>
+        <div class="error">
+            <p>❌ Error generating QR code: ${error.message}</p>
+        </div>
+        <p><a href="/">← Back to Dashboard</a></p>
+    </div>
+</body>
+</html>
+                    `);
+                }
+            } else {
+                res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WhatsApp QR Code</title>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
+        .qr-container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: inline-block; }
+        h1 { color: #333; }
+        p { color: #666; margin: 20px 0; }
+        .status { background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="qr-container">
+        <h1>📱 WhatsApp QR Code</h1>
+        <div class="status">
+            <p>✅ WhatsApp is already connected!</p>
+            <p>No QR code needed.</p>
+        </div>
+        <p><a href="/">← Back to Dashboard</a></p>
+    </div>
+</body>
+</html>
+                `);
+            }
         });
 
         // Status endpoint
@@ -538,13 +636,13 @@ class WhatsAppTailorBot {
                 return true;
             }
 
-            // Check for similar recent messages
+            // Check for similar recent messages (same order and status)
             const similarMessage = recentMessages.find(msg => 
                 msg.orderId === orderId && msg.status === status
             );
             if (similarMessage) {
                 this.duplicatesBlocked++;
-                this.addLog(`🚫 Similar message already sent to ${phone} for order ${orderId}`);
+                this.addLog(`🚫 Similar message already sent to ${phone} for order ${orderId} with status ${status}`);
                 return true;
             }
         }
@@ -705,9 +803,14 @@ class WhatsAppTailorBot {
             // Initialize Google Sheets
             await this.initializeGoogleSheets();
 
-            // Initialize WhatsApp client
-            this.addLog('📱 Initializing WhatsApp client...');
-            this.whatsappClient = new WhatsAppClient();
+            // Initialize Enhanced WhatsApp client with duplicate prevention
+            this.addLog('📱 Initializing Enhanced WhatsApp client...');
+            this.whatsappClient = new EnhancedWhatsAppClient({
+                duplicatePreventionEnabled: true,
+                maxMessagesPerDay: 5,
+                messageCooldownMs: 300000, // 5 minutes
+                duplicateCheckWindowMs: 24 * 60 * 60 * 1000 // 24 hours
+            });
             await this.whatsappClient.initialize();
 
             // Start Express server
@@ -812,6 +915,14 @@ class WhatsAppTailorBot {
                 this.addLog(`❌ Error polling ${config.name}: ${error.message}`);
             }
         }
+
+        // Process enhanced reminders after main order processing
+        try {
+            await this.processEnhancedPickupReminders();
+            await this.processEnhancedPaymentReminders();
+        } catch (error) {
+            this.addLog(`❌ Error processing reminders: ${error.message}`);
+        }
     }
 
     async pollSheet(sheetId, sheetName, sheetType) {
@@ -862,8 +973,14 @@ class WhatsAppTailorBot {
                     phoneColumn = 3;
                 }
                 
-                const status = rowData[8] || ''; // Column I
+                // For fabric orders, use Payment Status column (index 6) for status
+                const status = sheetType === 'fabric' ? (rowData[6] || '') : (rowData[8] || ''); // Column G for fabric, Column I for main
                 const orderId = rowData[0] || ''; // Column A
+                
+                // Debug: Log which column is being used for fabric orders
+                if (sheetType === 'fabric') {
+                    this.addLog(`🔍 DEBUG FABRIC: Order=${orderId}, rowData[6]="${rowData[6]}", rowData[8]="${rowData[8]}", status="${status}"`);
+                }
                 
                 // Validate phone number
                 const cleanPhone = phone.replace(/\D/g, '');
@@ -891,13 +1008,21 @@ class WhatsAppTailorBot {
     shouldSendNotification(status, orderId, phone, sheetType, rowData, headers) {
         // Enhanced validation
         if (!status || !orderId || !phone) {
+            this.addLog(`🔍 Debug: Missing data - status:${status}, orderId:${orderId}, phone:${phone}`);
             return false;
         }
 
+        // Clean the status (remove extra whitespace and newlines)
+        const cleanStatus = status.trim().toLowerCase();
+        this.addLog(`🔍 Debug: Checking order ${orderId} with status "${status}" (cleaned: "${cleanStatus}") for phone ${phone}`);
+
         // Check for duplicates using enhanced system
-        if (this.isDuplicateMessage(phone, orderId, status, sheetType)) {
+        if (this.isDuplicateMessage(phone, orderId, cleanStatus, sheetType)) {
+            this.addLog(`🔍 Debug: Duplicate check failed for order ${orderId}`);
             return false;
         }
+
+        this.addLog(`🔍 Debug: Duplicate check passed for order ${orderId}`);
 
         // Check Google Sheet notification status to prevent duplicate sends
         const welcomeNotifiedIndex = headers.findIndex(h => h && h.toLowerCase().includes('welcome') && h.toLowerCase().includes('notified'));
@@ -906,7 +1031,7 @@ class WhatsAppTailorBot {
         const deliveryNotifiedIndex = headers.findIndex(h => h && h.toLowerCase().includes('delivery') && h.toLowerCase().includes('notified'));
 
         // Check if messages have already been sent based on status
-        if (['confirmed', 'new', 'pending'].includes(status.toLowerCase())) {
+        if (['confirmed', 'new', 'pending'].includes(cleanStatus)) {
             // For these statuses, check if welcome and confirmation have been sent
             const welcomeSent = welcomeNotifiedIndex !== -1 && rowData[welcomeNotifiedIndex] && rowData[welcomeNotifiedIndex].toLowerCase() === 'yes';
             const confirmationSent = confirmationNotifiedIndex !== -1 && rowData[confirmationNotifiedIndex] && rowData[confirmationNotifiedIndex].toLowerCase() === 'yes';
@@ -915,16 +1040,18 @@ class WhatsAppTailorBot {
                 this.addLog(`📋 Order ${orderId}: Welcome and confirmation already sent - skipping`);
                 return false;
             }
-        } else if (status.toLowerCase() === 'ready') {
+        } else if (cleanStatus === 'ready') {
             // For ready status, check if ready notification has been sent
             const readySent = readyNotifiedIndex !== -1 && rowData[readyNotifiedIndex] && rowData[readyNotifiedIndex].toLowerCase() === 'yes';
             if (readySent) {
                 this.addLog(`📋 Order ${orderId}: Ready notification already sent - skipping`);
                 return false;
             }
-        } else if (['delivered', 'completed'].includes(status.toLowerCase())) {
+        } else if (['delivered', 'completed'].includes(cleanStatus)) {
             // For delivered/completed status, check if delivery notification has been sent
+            this.addLog(`🔍 Debug: deliveryNotifiedIndex=${deliveryNotifiedIndex}, rowData[deliveryNotifiedIndex]="${rowData[deliveryNotifiedIndex]}"`);
             const deliverySent = deliveryNotifiedIndex !== -1 && rowData[deliveryNotifiedIndex] && rowData[deliveryNotifiedIndex].toLowerCase() === 'yes';
+            this.addLog(`🔍 Debug: deliverySent=${deliverySent}`);
             if (deliverySent) {
                 this.addLog(`📋 Order ${orderId}: Delivery notification already sent - skipping`);
                 return false;
@@ -939,31 +1066,63 @@ class WhatsAppTailorBot {
             'pickup',          // Ready for pickup
             'confirmed',       // Order confirmed (sends welcome + confirmation)
             'new',            // New order (sends welcome + confirmation)
-            'pending'         // Order pending (sends welcome + confirmation)
+            'pending',        // Order pending (sends welcome + confirmation)
+            'in process',     // Order in process (sends welcome + confirmation)
+            'purchased',      // Fabric order purchased (sends purchase confirmation only)
+            'partial'         // Partial payment status (sends payment reminder)
         ];
         
-        return triggerStatuses.includes(status.toLowerCase());
+        this.addLog(`🔍 Debug: Checking if "${cleanStatus}" is in trigger statuses: ${triggerStatuses.includes(cleanStatus)}`);
+        return triggerStatuses.includes(cleanStatus);
     }
 
     async processOrder(rowData, headers, rowIndex, sheetType, cleanPhone) {
         try {
             // Extract order details
-            const orderData = {
-                order_id: rowData[0] || 'N/A',
-                customer_name: rowData[1] || 'N/A',
-                phone: cleanPhone || '',
-                garment_type: rowData[5] || 'N/A', // Fixed: Use Garment Types (index 5) instead of Customer Type (index 4)
-                status: rowData[8] || 'N/A',
-                delivery_date: rowData[6] || 'N/A',
-                total_amount: rowData[9] || 'N/A',
-                advance_amount: rowData[10] || 'N/A',
-                remaining_amount: rowData[11] || 'N/A'
-            };
+            // Create order data with correct column mapping based on sheet type
+            let orderData;
+            if (sheetType === 'fabric') {
+                // Fabric order column mapping - EXACT MAPPING
+                orderData = {
+                    order_id: rowData[0] || 'N/A',           // Index 0: FCZ18092508
+                    customer_name: rowData[1] || 'N/A',      // Index 1: Deepak Saini
+                    phone: cleanPhone || '',                 // Index 2: 7375938371
+                    garment_type: `${rowData[9] || ''} ${rowData[10] || ''} ${rowData[11] || ''}`.trim(), // Index 9,10,11: Mafatlal Dress Chiffon
+                    status: rowData[6] || 'N/A',             // Index 6: Payment Status - "Partial"
+                    delivery_date: rowData[5] || 'N/A',      // Index 5: 2025-09-18
+                    purchase_date: rowData[5] || 'N/A',      // Index 5: 2025-09-18
+                    total_amount: rowData[15] || 'N/A',      // Index 15: 360
+                    advance_amount: rowData[22] || 'N/A',    // Index 22: 300
+                    advance_payment: rowData[22] || 'N/A',   // Index 22: 300 (for template)
+                    remaining_amount: rowData[23] || 'N/A',  // Index 23: 60
+                    fabric_brand: rowData[9] || 'N/A',       // Index 9: Mafatlal
+                    fabric_for: rowData[10] || 'N/A',        // Index 10: Dress
+                    fabric_type: `${rowData[9] || ''} ${rowData[10] || ''} ${rowData[11] || ''}`.trim(), // Index 9,10,11: Mafatlal Dress Chiffon
+                    fabric_color: rowData[12] || 'N/A',      // Index 12: Navy
+                    quantity: rowData[13] || 'N/A',          // Index 13: 1.2
+                    price_per_meter: rowData[14] || 'N/A',   // Index 14: 300
+                    shop_phone: '8824781960',                // Shop phone number
+                    shop_name: 'RS Tailor & Fabric'          // Shop name
+                };
+            } else {
+                // Main order column mapping
+                orderData = {
+                    order_id: rowData[0] || 'N/A',
+                    customer_name: rowData[1] || 'N/A',
+                    phone: cleanPhone || '',
+                    garment_type: rowData[5] || 'N/A', // Fixed: Use Garment Types (index 5) instead of Customer Type (index 4)
+                    status: rowData[8] || 'N/A',
+                    delivery_date: rowData[6] || 'N/A',
+                    total_amount: rowData[9] || 'N/A',
+                    advance_amount: rowData[10] || 'N/A',
+                    remaining_amount: rowData[11] || 'N/A'
+                };
+            }
 
             this.addLog(`🎯 Processing order: ${orderData.order_id} for ${orderData.customer_name}`);
 
             const jid = this.formatPhoneNumber(orderData.phone);
-            const status = orderData.status?.toLowerCase();
+            const status = orderData.status?.trim().toLowerCase();
 
             // Record that we're processing this message
             this.recordMessageSent(orderData.phone, orderData.order_id, orderData.status, 'processing');
@@ -972,7 +1131,7 @@ class WhatsAppTailorBot {
             let message = '';
             let messageType = '';
 
-            if (['confirmed', 'new', 'pending'].includes(status)) {
+            if (['confirmed', 'new', 'pending', 'in process'].includes(status)) {
                 // Send welcome message first, then confirmation
                 const welcomeMessage = this.messageTemplates.getWelcomeMessage(orderData);
                 await this.queue.add(() => this.whatsappClient.sendMessage(jid, welcomeMessage));
@@ -991,9 +1150,29 @@ class WhatsAppTailorBot {
                 message = this.messageTemplates.getOrderReadyMessage(orderData);
                 messageType = 'order ready';
                 
-            } else if (status === 'delivered') {
-                message = this.messageTemplates.getOrderDeliveredMessage(orderData);
+            } else if (status === 'delivered' || status.toLowerCase() === 'delivered') {
+                message = this.messageTemplates.getDeliveryNotificationMessage(orderData);
                 messageType = 'delivery confirmation';
+                
+            } else if (status === 'purchased' || status === 'partial') {
+                // Fabric order purchased - mark welcome as notified but don't send welcome message
+                // (customer already exists in tailor order sheet)
+                this.addLog(`✅ Marking welcome as notified for ${orderData.customer_name} (existing customer)`);
+                
+                // Debug: Log the order data being passed to template
+                this.addLog(`🔍 Debug Fabric Order Data: ${JSON.stringify(orderData, null, 2)}`);
+                
+                // Update sheet for welcome message (mark as notified without sending)
+                await this.updateSheetNotificationStatus(sheetType, rowIndex, 'welcome');
+                
+                // Send purchase confirmation message
+                message = this.messageTemplates.getFabricPurchaseMessage(orderData);
+                messageType = 'fabric purchase confirmation';
+                
+            } else if (status === 'partial') {
+                // Partial payment - send payment reminder
+                message = this.messageTemplates.getFabricPaymentReminderMessage(orderData);
+                messageType = 'fabric payment reminder';
             }
 
             if (message) {
@@ -1036,22 +1215,42 @@ class WhatsAppTailorBot {
             let columnToUpdate = '';
             let updateValue = 'Yes';
             
-            switch (messageType) {
-                case 'welcome':
-                    columnToUpdate = 'S'; // Welcome Notified column (19th column)
-                    break;
-                case 'order confirmation':
-                    columnToUpdate = 'T'; // Confirmation Notified column (20th column)
-                    break;
-                case 'order ready':
-                    columnToUpdate = 'U'; // Ready Notified column (21st column)
-                    break;
-                case 'delivery confirmation':
-                    columnToUpdate = 'V'; // Delivery Notified column (22nd column)
-                    break;
-                default:
-                    this.addLog(`⚠️ Unknown message type for sheet update: ${messageType}`);
-                    return;
+            // Different column mapping for fabric orders vs main orders
+            if (sheetType === 'fabric') {
+                // Fabric order column mapping (based on actual fabric sheet headers)
+                switch (messageType) {
+                    case 'welcome':
+                        columnToUpdate = 'S'; // Welcome Notified column (index 18)
+                        break;
+                    case 'fabric purchase confirmation':
+                        columnToUpdate = 'T'; // Purchase Notified column (index 19)
+                        break;
+                    case 'fabric payment reminder':
+                        columnToUpdate = 'U'; // Payment Notified column (index 20)
+                        break;
+                    default:
+                        this.addLog(`⚠️ Unknown fabric message type for sheet update: ${messageType}`);
+                        return;
+                }
+            } else {
+                // Main order column mapping
+                switch (messageType) {
+                    case 'welcome':
+                        columnToUpdate = 'S'; // Welcome Notified column (19th column)
+                        break;
+                    case 'order confirmation':
+                        columnToUpdate = 'T'; // Confirmation Notified column (20th column)
+                        break;
+                    case 'order ready':
+                        columnToUpdate = 'U'; // Ready Notified column (21st column)
+                        break;
+                    case 'delivery confirmation':
+                        columnToUpdate = 'V'; // Delivery Notified column (22nd column)
+                        break;
+                    default:
+                        this.addLog(`⚠️ Unknown message type for sheet update: ${messageType}`);
+                        return;
+                }
             }
 
             // Try multiple range formats to handle different sheet configurations
@@ -1304,6 +1503,356 @@ class WhatsAppTailorBot {
             return { status: 'healthy' };
         } catch (error) {
             return { status: 'error', error: error.message };
+        }
+    }
+
+    // ==================== ENHANCED REMINDER PROCESSING FUNCTIONS ====================
+
+    /**
+     * Process enhanced pickup reminders with delivery date checks
+     */
+    async processEnhancedPickupReminders() {
+        try {
+            this.addLog('🔔 Processing enhanced pickup reminders...');
+            
+            const ordersNeedingPickupReminders = await this.findOrdersNeedingEnhancedPickupReminders();
+            
+            if (ordersNeedingPickupReminders.length === 0) {
+                this.addLog('📝 No orders need enhanced pickup reminders');
+                return;
+            }
+
+            this.addLog(`🔔 Found ${ordersNeedingPickupReminders.length} orders needing enhanced pickup reminders`);
+
+            for (const order of ordersNeedingPickupReminders) {
+                const orderId = order['Order ID'] || order['Master Order ID'];
+                const customerPhone = this.formatPhoneNumber(order['Contact Info'] || order['Contact Number']);
+                
+                if (!customerPhone) {
+                    this.addLog(`❌ Order ${orderId} missing customer phone number for pickup reminder`);
+                    continue;
+                }
+
+                try {
+                    // Calculate days since delivery date (when order became overdue)
+                    const deliveryDate = new Date(order['Delivery Date']);
+                    const today = new Date();
+                    const daysSinceDelivery = Math.floor((today - deliveryDate) / (1000 * 60 * 60 * 24));
+                    
+                    // Get current reminder count
+                    const currentReminderCount = parseInt(order['Pickup Reminder Count'] || '0');
+                    
+                    // Enhanced reminder schedule: 3, 10, 25, 55, 100, 190 days after delivery
+                    const reminderSchedule = [3, 10, 25, 55, 100, 190];
+                    const shouldSendReminder = reminderSchedule.includes(daysSinceDelivery) && 
+                                             currentReminderCount < reminderSchedule.length;
+                    
+                    if (!shouldSendReminder) {
+                        continue;
+                    }
+
+                    const nextReminderCount = currentReminderCount + 1;
+                    this.addLog(`🔔 Sending enhanced pickup reminder ${nextReminderCount} for order: ${orderId} (${daysSinceDelivery} days since delivery date)`);
+
+                    // Prepare enhanced pickup reminder data
+                    const pickupReminderData = {
+                        order_id: orderId,
+                        customer_name: order['Customer Name'],
+                        garment_type: order['Garment Types'],
+                        delivery_date: order['Delivery Date'],
+                        days_overdue: daysSinceDelivery,
+                        total_amount: order['Price'],
+                        advance_amount: order['Advance Payment'],
+                        remaining_amount: order['Remaining Amount'],
+                        reminder_number: nextReminderCount
+                    };
+
+                    // Send enhanced pickup reminder
+                    const result = await this.whatsappClient.sendPickupReminder(customerPhone, pickupReminderData, nextReminderCount, 'tailor');
+
+                    if (result.success) {
+                        await this.updatePickupReminderCount(order, nextReminderCount);
+                        this.addLog(`✅ Enhanced pickup reminder ${nextReminderCount} sent successfully for order: ${orderId}`);
+                    } else if (result.blocked) {
+                        this.addLog(`🚫 Enhanced pickup reminder ${nextReminderCount} blocked (duplicate prevention): ${result.blockReason} for order ${orderId}`);
+                        await this.updatePickupReminderCount(order, nextReminderCount);
+                    } else {
+                        this.addLog(`❌ Failed to send enhanced pickup reminder for order ${orderId}: ${result.error}`);
+                    }
+
+                } catch (error) {
+                    this.addLog(`❌ Error processing enhanced pickup reminder for order ${orderId}: ${error.message}`);
+                }
+            }
+
+        } catch (error) {
+            this.addLog(`❌ Error processing enhanced pickup reminders: ${error.message}`);
+        }
+    }
+
+    /**
+     * Process enhanced payment reminders with amount thresholds
+     */
+    async processEnhancedPaymentReminders() {
+        try {
+            this.addLog('💳 Processing enhanced payment reminders...');
+            
+            const ordersNeedingPaymentReminders = await this.findOrdersNeedingEnhancedPaymentReminders();
+            
+            if (ordersNeedingPaymentReminders.length === 0) {
+                this.addLog('📝 No orders need enhanced payment reminders');
+                return;
+            }
+
+            this.addLog(`💳 Found ${ordersNeedingPaymentReminders.length} orders needing enhanced payment reminders`);
+
+            for (const order of ordersNeedingPaymentReminders) {
+                const orderId = order['Order ID'] || order['Master Order ID'];
+                const customerPhone = this.formatPhoneNumber(order['Contact Info'] || order['Contact Number']);
+                
+                if (!customerPhone) {
+                    this.addLog(`❌ Order ${orderId} missing customer phone number for payment reminder`);
+                    continue;
+                }
+
+                try {
+                    // Calculate days since delivery
+                    const deliveryDate = new Date(order['Delivery Date']);
+                    const today = new Date();
+                    const daysSinceDelivery = Math.floor((today - deliveryDate) / (1000 * 60 * 60 * 24));
+                    
+                    // Get current reminder count
+                    const currentReminderCount = parseInt(order['Payment Reminder Count'] || '0');
+                    
+                    // Enhanced reminder schedule: 15, 31, 48, 66, 85, 105 days after delivery
+                    const reminderSchedule = [15, 31, 48, 66, 85, 105];
+                    const shouldSendReminder = reminderSchedule.includes(daysSinceDelivery) && 
+                                             currentReminderCount < reminderSchedule.length;
+                    
+                    if (!shouldSendReminder) {
+                        continue;
+                    }
+
+                    const nextReminderCount = currentReminderCount + 1;
+                    this.addLog(`💳 Sending enhanced payment reminder ${nextReminderCount} for order: ${orderId} (${daysSinceDelivery} days since delivery, ₹${order['Remaining Amount']} pending)`);
+
+                    // Prepare enhanced payment reminder data
+                    const paymentReminderData = {
+                        order_id: orderId,
+                        customer_name: order['Customer Name'],
+                        garment_type: order['Garment Types'],
+                        delivery_date: order['Delivery Date'],
+                        days_pending: daysSinceDelivery,
+                        total_amount: order['Price'],
+                        advance_amount: order['Advance Payment'],
+                        remaining_amount: order['Remaining Amount'],
+                        reminder_number: nextReminderCount
+                    };
+
+                    // Send enhanced payment reminder
+                    const result = await this.whatsappClient.sendPaymentReminder(customerPhone, paymentReminderData, nextReminderCount, 'tailor');
+
+                    if (result.success) {
+                        await this.updatePaymentReminderCount(order, nextReminderCount);
+                        this.addLog(`✅ Enhanced payment reminder ${nextReminderCount} sent successfully for order: ${orderId}`);
+                    } else if (result.blocked) {
+                        this.addLog(`🚫 Enhanced payment reminder ${nextReminderCount} blocked (duplicate prevention): ${result.blockReason} for order ${orderId}`);
+                        await this.updatePaymentReminderCount(order, nextReminderCount);
+                    } else {
+                        this.addLog(`❌ Failed to send enhanced payment reminder for order ${orderId}: ${result.error}`);
+                    }
+
+                } catch (error) {
+                    this.addLog(`❌ Error processing enhanced payment reminder for order ${orderId}: ${error.message}`);
+                }
+            }
+
+        } catch (error) {
+            this.addLog(`❌ Error processing enhanced payment reminders: ${error.message}`);
+        }
+    }
+
+    /**
+     * Find orders that need enhanced pickup reminders
+     */
+    async findOrdersNeedingEnhancedPickupReminders() {
+        try {
+            const mainSheetConfig = this.sheetConfigs.find(config => config.type === 'main');
+            if (!mainSheetConfig) return [];
+
+            const response = await this.sheets.spreadsheets.values.get({
+                spreadsheetId: mainSheetConfig.id,
+                range: 'A:Z'
+            });
+
+            const rows = response.data.values || [];
+            if (rows.length <= 1) return [];
+
+            const headers = rows[0];
+            const dataRows = rows.slice(1);
+            const ordersNeedingReminders = [];
+
+            for (const rowData of dataRows) {
+                const status = rowData[8]?.trim().toLowerCase(); // Delivery Status column
+                const readyNotified = rowData[22]?.toLowerCase() === 'yes'; // Ready Notified column
+                const pickupNotified = rowData[23]?.toLowerCase() === 'yes'; // Pickup Notified column
+                const deliveryDate = new Date(rowData[7]); // Delivery Date column
+                const today = new Date();
+                const daysSinceDelivery = Math.floor((today - deliveryDate) / (1000 * 60 * 60 * 24));
+                
+                // Enhanced conditions: Ready + Ready Notified + Not Pickup Notified + Delivery Date Passed
+                if (status === 'ready' && readyNotified && !pickupNotified && daysSinceDelivery >= 3) {
+                    const order = {};
+                    headers.forEach((header, index) => {
+                        order[header] = rowData[index];
+                    });
+                    ordersNeedingReminders.push(order);
+                }
+            }
+
+            return ordersNeedingReminders;
+        } catch (error) {
+            this.addLog(`❌ Error finding orders needing enhanced pickup reminders: ${error.message}`);
+            return [];
+        }
+    }
+
+    /**
+     * Find orders that need enhanced payment reminders
+     */
+    async findOrdersNeedingEnhancedPaymentReminders() {
+        try {
+            const mainSheetConfig = this.sheetConfigs.find(config => config.type === 'main');
+            if (!mainSheetConfig) return [];
+
+            const response = await this.sheets.spreadsheets.values.get({
+                spreadsheetId: mainSheetConfig.id,
+                range: 'A:Z'
+            });
+
+            const rows = response.data.values || [];
+            if (rows.length <= 1) return [];
+
+            const headers = rows[0];
+            const dataRows = rows.slice(1);
+            const ordersNeedingReminders = [];
+
+            for (const rowData of dataRows) {
+                const status = rowData[8]?.trim().toLowerCase(); // Delivery Status column
+                const deliveryNotified = rowData[21]?.toLowerCase() === 'yes'; // Delivery Notified column
+                const remainingAmount = parseFloat(rowData[11] || '0'); // Remaining Amount column
+                const paymentStatus = rowData[13]?.toLowerCase(); // Payment Status column
+                const deliveryDate = new Date(rowData[7]); // Delivery Date column
+                const today = new Date();
+                const daysSinceDelivery = Math.floor((today - deliveryDate) / (1000 * 60 * 60 * 24));
+                
+                // Enhanced conditions: Delivered + Delivery Notified + Remaining Amount >= 150 + Payment Unpaid/Pending + Days >= 15
+                if (status === 'delivered' && 
+                    deliveryNotified && 
+                    remainingAmount >= 150 && 
+                    (paymentStatus === 'unpaid' || paymentStatus === 'pending') &&
+                    daysSinceDelivery >= 15) {
+                    
+                    const order = {};
+                    headers.forEach((header, index) => {
+                        order[header] = rowData[index];
+                    });
+                    ordersNeedingReminders.push(order);
+                }
+            }
+
+            return ordersNeedingReminders;
+        } catch (error) {
+            this.addLog(`❌ Error finding orders needing enhanced payment reminders: ${error.message}`);
+            return [];
+        }
+    }
+
+    /**
+     * Update pickup reminder count in Google Sheet
+     */
+    async updatePickupReminderCount(order, reminderCount) {
+        try {
+            const mainSheetConfig = this.sheetConfigs.find(config => config.type === 'main');
+            if (!mainSheetConfig) return;
+
+            const response = await this.sheets.spreadsheets.values.get({
+                spreadsheetId: mainSheetConfig.id,
+                range: 'A:Z'
+            });
+
+            const rows = response.data.values || [];
+            const headers = rows[0];
+            const pickupReminderCountIndex = headers.findIndex(h => h && h.toLowerCase().includes('pickup') && h.toLowerCase().includes('reminder') && h.toLowerCase().includes('count'));
+
+            if (pickupReminderCountIndex === -1) {
+                this.addLog('⚠️ Pickup Reminder Count column not found');
+                return;
+            }
+
+            for (let i = 1; i < rows.length; i++) {
+                const rowData = rows[i];
+                const orderId = rowData[0];
+                if (orderId === order['Order ID']) {
+                    const range = `${String.fromCharCode(65 + pickupReminderCountIndex)}${i + 1}`;
+                    await this.sheets.spreadsheets.values.update({
+                        spreadsheetId: mainSheetConfig.id,
+                        range: range,
+                        valueInputOption: 'RAW',
+                        resource: {
+                            values: [[reminderCount.toString()]]
+                        }
+                    });
+                    this.addLog(`✅ Updated enhanced pickup reminder count for order ${order['Order ID']} to ${reminderCount}`);
+                    break;
+                }
+            }
+        } catch (error) {
+            this.addLog(`❌ Error updating enhanced pickup reminder count: ${error.message}`);
+        }
+    }
+
+    /**
+     * Update payment reminder count in Google Sheet
+     */
+    async updatePaymentReminderCount(order, reminderCount) {
+        try {
+            const mainSheetConfig = this.sheetConfigs.find(config => config.type === 'main');
+            if (!mainSheetConfig) return;
+
+            const response = await this.sheets.spreadsheets.values.get({
+                spreadsheetId: mainSheetConfig.id,
+                range: 'A:Z'
+            });
+
+            const rows = response.data.values || [];
+            const headers = rows[0];
+            const paymentReminderCountIndex = headers.findIndex(h => h && h.toLowerCase().includes('payment') && h.toLowerCase().includes('reminder') && h.toLowerCase().includes('count'));
+
+            if (paymentReminderCountIndex === -1) {
+                this.addLog('⚠️ Payment Reminder Count column not found');
+                return;
+            }
+
+            for (let i = 1; i < rows.length; i++) {
+                const rowData = rows[i];
+                const orderId = rowData[0];
+                if (orderId === order['Order ID']) {
+                    const range = `${String.fromCharCode(65 + paymentReminderCountIndex)}${i + 1}`;
+                    await this.sheets.spreadsheets.values.update({
+                        spreadsheetId: mainSheetConfig.id,
+                        range: range,
+                        valueInputOption: 'RAW',
+                        resource: {
+                            values: [[reminderCount.toString()]]
+                        }
+                    });
+                    this.addLog(`✅ Updated enhanced payment reminder count for order ${order['Order ID']} to ${reminderCount}`);
+                    break;
+                }
+            }
+        } catch (error) {
+            this.addLog(`❌ Error updating enhanced payment reminder count: ${error.message}`);
         }
     }
 }

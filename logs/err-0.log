@@ -1,0 +1,26 @@
+You have triggered an unhandledRejection, you may have forgotten to catch a Promise rejection:
+Error: UNKNOWN: unknown error, open 'C:\Users\gssai\OneDrive\Desktop\Whatsapp-Moblie-Bot\baileys_auth\creds.json'
+    at async open (node:internal/fs/promises:641:25)
+    at async writeFile (node:internal/fs/promises:1215:14)
+    at async file:///C:/Users/gssai/OneDrive/Desktop/Whatsapp-Moblie-Bot/node_modules/@whiskeysockets/baileys/lib/Utils/use-multi-file-auth-state.js:35:17
+2025-09-18T16:48:17: Unhandled Rejection at: Promise {
+  <rejected> Error: UNKNOWN: unknown error, open 'C:\Users\gssai\OneDrive\Desktop\Whatsapp-Moblie-Bot\baileys_auth\creds.json'
+      at async open (node:internal/fs/promises:641:25)
+      at async writeFile (node:internal/fs/promises:1215:14)
+      at async file:///C:/Users/gssai/OneDrive/Desktop/Whatsapp-Moblie-Bot/node_modules/@whiskeysockets/baileys/lib/Utils/use-multi-file-auth-state.js:35:17 {
+    errno: -4094,
+    code: 'UNKNOWN',
+    syscall: 'open',
+    path: 'C:\\Users\\gssai\\OneDrive\\Desktop\\Whatsapp-Moblie-Bot\\baileys_auth\\creds.json'
+  }
+} reason: Error: UNKNOWN: unknown error, open 'C:\Users\gssai\OneDrive\Desktop\Whatsapp-Moblie-Bot\baileys_auth\creds.json'
+    at async open (node:internal/fs/promises:641:25)
+    at async writeFile (node:internal/fs/promises:1215:14)
+    at async file:///C:/Users/gssai/OneDrive/Desktop/Whatsapp-Moblie-Bot/node_modules/@whiskeysockets/baileys/lib/Utils/use-multi-file-auth-state.js:35:17 {
+  errno: -4094,
+  code: 'UNKNOWN',
+  syscall: 'open',
+  path: 'C:\\Users\\gssai\\OneDrive\\Desktop\\Whatsapp-Moblie-Bot\\baileys_auth\\creds.json'
+}
+2025-09-18T16:48:24: ❌ Failed to send message: WhatsApp not connected
+2025-09-18T19:09:21: Closing stale open session for new outgoing prekey bundle

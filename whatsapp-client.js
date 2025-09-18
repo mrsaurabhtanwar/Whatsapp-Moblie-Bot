@@ -12,9 +12,11 @@ const pino = require('pino');
 const QRCode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
+const EventEmitter = require('events');
 
-class WhatsAppClient {
+class WhatsAppClient extends EventEmitter {
     constructor() {
+        super();
         this.socket = null;
         this.isConnected = false;
         this.connectionState = 'disconnected';
@@ -85,6 +87,9 @@ class WhatsAppClient {
                 const shouldReconnect = (lastDisconnected?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
                 
                 console.log('🔌 Connection closed. Reason:', lastDisconnected?.error?.output?.statusCode);
+                this.isConnected = false;
+                this.connectionState = 'disconnected';
+                this.emit('disconnected');
                 
                 if (shouldReconnect && this.reconnectAttempts < this.maxReconnectAttempts) {
                     this.reconnectAttempts++;
@@ -101,8 +106,6 @@ class WhatsAppClient {
                     setTimeout(() => this.initialize(), 2000);
                 } else {
                     console.log('❌ Max reconnection attempts reached. Please restart the bot.');
-                    this.isConnected = false;
-                    this.connectionState = 'disconnected';
                 }
             } else if (connection === 'open') {
                 console.log('✅ WhatsApp connected successfully!');
@@ -110,6 +113,7 @@ class WhatsAppClient {
                 this.connectionState = 'connected';
                 this.reconnectAttempts = 0;
                 this.qrCode = null;
+                this.emit('connected');
             } else if (connection === 'connecting') {
                 console.log('🔄 Connecting to WhatsApp...');
                 this.connectionState = 'connecting';

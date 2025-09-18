@@ -628,7 +628,7 @@ Main Market, Kumher.`,
      * Get order confirmation message
      */
     getOrderConfirmationMessage(orderData, language = null) {
-        return this.formatTemplate('order_confirmation', orderData, language);
+        return this.formatTemplate('order_confirmation', orderData, language || 'hindi');
     }
 
     /**

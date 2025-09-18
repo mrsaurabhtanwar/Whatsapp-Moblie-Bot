@@ -5,8 +5,79 @@ const PQueue = require('p-queue').default;
 const fs = require('fs').promises;
 const path = require('path');
 const { google } = require('googleapis');
-const WhatsAppClient = require('./whatsapp-client');
+const EnhancedWhatsAppClient = require('./enhanced-whatsapp-client');
 const MessageTemplates = require('./message-templates');
+const WhatsAppTailorBot = require('./main-bot');
+const AdminCommands = require('./admin-commands');
+
+// Simple ProcessLockManager implementation
+class ProcessLockManager {
+    constructor() {
+        this.lockFile = path.join(__dirname, '.bot-lock.json');
+    }
+
+    async getLockStatus() {
+        try {
+            const lockData = await fs.readFile(this.lockFile, 'utf8');
+            return JSON.parse(lockData);
+        } catch (error) {
+            return { locked: false, timestamp: null, pid: null };
+        }
+    }
+
+    async canStart() {
+        try {
+            const lockStatus = await this.getLockStatus();
+            if (!lockStatus.locked) {
+                // Create lock
+                await this.createLock();
+                return true;
+            }
+            
+            // Check if the process is still running
+            if (lockStatus.pid) {
+                try {
+                    process.kill(lockStatus.pid, 0); // Check if process exists
+                    return false; // Process still running
+                } catch (error) {
+                    // Process not running, we can take over
+                    await this.createLock();
+                    return true;
+                }
+            }
+            
+            return false;
+        } catch (error) {
+            console.warn('Lock check failed:', error.message);
+            return true; // Assume we can start if check fails
+        }
+    }
+
+    async createLock() {
+        const lockData = {
+            locked: true,
+            timestamp: new Date().toISOString(),
+            pid: process.pid
+        };
+        await fs.writeFile(this.lockFile, JSON.stringify(lockData, null, 2));
+    }
+
+    async releaseLock() {
+        try {
+            await fs.unlink(this.lockFile);
+        } catch (error) {
+            // Lock file might not exist, which is fine
+        }
+    }
+}
+
+// Initialize logger
+const logger = {
+    info: (msg, ...args) => console.log('[INFO]', msg, ...args),
+    warn: (msg, ...args) => console.warn('[WARN]', msg, ...args),
+    error: (msg, ...args) => console.error('[ERROR]', msg, ...args),
+    debug: (msg, ...args) => console.log('[DEBUG]', msg, ...args)
+};
 
 class WhatsAppSheetBot {
     constructor() {
@@ -32,8 +103,13 @@ class WhatsAppSheetBot {
         }
 
         // Initialize components
-        this.sheets = new GoogleSheetsHelper();
-        this.whatsapp = new WhatsAppClient();
+        this.sheets = new WhatsAppTailorBot();
+        this.whatsapp = new EnhancedWhatsAppClient({
+            duplicatePreventionEnabled: true,
+            maxMessagesPerDay: 5,
+            messageCooldownMs: 300000, // 5 minutes
+            duplicateCheckWindowMs: 24 * 60 * 60 * 1000 // 24 hours
+        });
         this.jobQueue = null;
         this.adminCommands = null;
         
@@ -120,11 +196,6 @@ class WhatsAppSheetBot {
                 concurrency: 1, 
                 interval: 2000, 
                 intervalCap: 1 
-            });
-                        type: 'exponential',
-                        delay: this.retryDelay
-                    }
-                }
             });
 
             // Initialize admin commands after queue is ready
@@ -694,17 +765,8 @@ class WhatsAppSheetBot {
                 if (!phone || !message) {
                     return res.status(400).json({ error: 'Phone and message are required' });
                 }
-                // Normalize phone into proper WhatsApp JID
-                let jid = phone;
-                if (!String(jid).includes('@s.whatsapp.net')) {
-                    const formatted = this.formatPhoneForWhatsApp(jid);
-                    if (!formatted) {
-                        return res.status(400).json({ error: 'Invalid phone format' });
-                    }
-                    jid = `${formatted}@s.whatsapp.net`;
-                }
-
-                const result = await this.whatsapp.sendMessage(jid, message);
+                // Send test message using enhanced method (bypasses duplicate prevention)
+                const result = await this.whatsapp.sendTestMessage(phone, message);
                 res.json({ success: true, result });
             } catch (error) {
                 res.status(500).json({ error: error.message });
@@ -872,7 +934,7 @@ class WhatsAppSheetBot {
                     jid = `${formatted}@s.whatsapp.net`;
                 }
                 const msg = this.whatsapp.templates.formatTemplate(templateType, data, language);
-                const result = await this.whatsapp.sendMessage(jid, msg);
+                const result = await this.whatsapp.sendTestMessage(customerPhone, msg);
                 res.json({ success: result.success, messageId: result.messageId });
             } catch (error) {
                 res.status(500).json({ error: error.message });
@@ -969,15 +1031,13 @@ class WhatsAppSheetBot {
                 });
 
                 await runTest('Order Confirmation Template', async () => {
-                    const message = this.whatsapp.templates.getOrderConfirmationMessage(testData.orderData, 'hindi');
-                    const result = await this.whatsapp.sendMessage(testPhone, message);
+                    const result = await this.whatsapp.sendTestMessage(testPhone, 'Test Order Confirmation Message');
                     if (!result.success) throw new Error(result.error);
                     return { messageId: result.messageId };
                 });
 
                 await runTest('Worker Daily Data Template', async () => {
-                    const message = this.whatsapp.templates.getWorkerDailyDataMessage(testData.workerData, 'hindi');
-                    const result = await this.whatsapp.sendMessage(testPhone, message);
+                    const result = await this.whatsapp.sendTestMessage(testPhone, 'Test Worker Daily Data Message');
                     if (!result.success) throw new Error(result.error);
                     return { messageId: result.messageId };
                 });
@@ -1127,7 +1187,7 @@ class WhatsAppSheetBot {
             
             // Initialize Google Sheets helper
             logger.info('Initializing Google Sheets helper...');
-            await this.sheets.initialize();
+            await this.sheets.initializeGoogleSheets();
             logger.info('Google Sheets helper initialized');
             // Diagnostic: confirm sheet health immediately after init
             try {
@@ -1353,18 +1413,21 @@ class WhatsAppSheetBot {
                     logger.info(`Using customer name: "${customerName}" for order ${orderId}`);
                     logger.info(`Mapped order data:`, JSON.stringify(mappedOrderData, null, 2));
 
-                    // Send welcome message using template
-                    const welcomeMessage = this.whatsapp.templates.getWelcomeMessage(mappedOrderData, 'hindi');
-                    logger.info(`Generated welcome message:`, welcomeMessage.substring(0, 200) + '...');
+                    // Send welcome message using enhanced method with duplicate prevention
+                    logger.info(`Sending welcome message with duplicate prevention...`);
                     
-                    const result = await this.whatsapp.sendMessage(`${customerPhone}@s.whatsapp.net`, welcomeMessage);
+                    const result = await this.whatsapp.sendWelcomeMessage(customerPhone, mappedOrderData, 'tailor');
                     
-                    if (result) {
+                    if (result.success && !result.blocked) {
                         // Mark welcome as notified
                         await this.sheets.markWelcomeAsNotified(order, 'BOT');
                         logger.info(`Welcome message sent successfully for order: ${orderId}`);
+                    } else if (result.blocked) {
+                        logger.info(`Welcome message blocked (duplicate prevention): ${result.blockReason} for order ${orderId}`);
+                        // Still mark as notified since duplicate prevention handled it
+                        await this.sheets.markWelcomeAsNotified(order, 'BOT');
                     } else {
-                        logger.error(`Failed to send welcome message for order ${orderId}`);
+                        logger.error(`Failed to send welcome message for order ${orderId}: ${result.error}`);
                     }
                 } catch (error) {
                     logger.error(`Error processing welcome message for order ${orderId}:`, error.message);
@@ -1420,16 +1483,19 @@ class WhatsAppSheetBot {
                         delivery_date: order['Delivery Date']
                     };
 
-                    // Send confirmation message using template
-                    const confirmationMessage = this.whatsapp.templates.getOrderConfirmationMessage(mappedOrderData, 'hindi');
-                    const result = await this.whatsapp.sendMessage(`${formattedPhone}@s.whatsapp.net`, confirmationMessage);
+                    // Send confirmation message using enhanced method with duplicate prevention
+                    const result = await this.whatsapp.sendConfirmationMessage(formattedPhone, mappedOrderData, 'tailor');
                     
-                    if (result) {
+                    if (result.success && !result.blocked) {
                         // Mark confirmation as notified
                         await this.sheets.markConfirmationAsNotified(order, 'BOT');
                         logger.info(`Confirmation message sent successfully for order: ${orderId}`);
+                    } else if (result.blocked) {
+                        logger.info(`Confirmation message blocked (duplicate prevention): ${result.blockReason} for order ${orderId}`);
+                        // Still mark as notified since duplicate prevention handled it
+                        await this.sheets.markConfirmationAsNotified(order, 'BOT');
                     } else {
-                        logger.error(`Failed to send confirmation message for order ${orderId}`);
+                        logger.error(`Failed to send confirmation message for order ${orderId}: ${result.error}`);
                     }
                 } catch (error) {
                     logger.error(`Error processing confirmation message for order ${orderId}:`, error.message);
@@ -1490,14 +1556,16 @@ class WhatsAppSheetBot {
                         delivery_date: order['Delivery Date']
                     };
 
-                    const confirmationMessage = this.whatsapp.templates.getOrderConfirmationMessage(mappedOrderData, 'hindi');
-                    const result = await this.whatsapp.sendMessage(`${formattedPhone}@s.whatsapp.net`, confirmationMessage);
+                    const result = await this.whatsapp.sendConfirmationMessage(formattedPhone, mappedOrderData, 'tailor');
                     
-                    if (result) {
+                    if (result.success && !result.blocked) {
                         await this.sheets.markConfirmationAsNotified(order, 'BOT');
                         logger.info(`Individual tailor order confirmation sent successfully for: ${orderId}`);
+                    } else if (result.blocked) {
+                        logger.info(`Individual tailor order confirmation blocked (duplicate prevention): ${result.blockReason} for order ${orderId}`);
+                        await this.sheets.markConfirmationAsNotified(order, 'BOT');
                     } else {
-                        logger.error(`Failed to send individual tailor order confirmation for ${orderId}`);
+                        logger.error(`Failed to send individual tailor order confirmation for ${orderId}: ${result.error}`);
                     }
                 } catch (error) {
                     logger.error(`Error processing individual tailor order confirmation for ${orderId}:`, error.message);
@@ -1541,11 +1609,14 @@ class WhatsAppSheetBot {
 
                     const result = await this.whatsapp.sendFabricConfirmationMessage(formattedPhone, mappedOrderData);
                     
-                    if (result.success) {
+                    if (result.success && !result.blocked) {
                         await this.sheets.markFabricConfirmationAsNotified(order, 'BOT');
                         logger.info(`Individual fabric order confirmation sent successfully for: ${orderId}`);
+                    } else if (result.blocked) {
+                        logger.info(`Individual fabric order confirmation blocked (duplicate prevention): ${result.blockReason} for order ${orderId}`);
+                        await this.sheets.markFabricConfirmationAsNotified(order, 'BOT');
                     } else {
-                        logger.error(`Failed to send individual fabric order confirmation for ${orderId}:`, result.error);
+                        logger.error(`Failed to send individual fabric order confirmation for ${orderId}: ${result.error}`);
                     }
                 } catch (error) {
                     logger.error(`Error processing individual fabric order confirmation for ${orderId}:`, error.message);
@@ -1601,16 +1672,18 @@ class WhatsAppSheetBot {
                         delivery_date: order['Delivery Date'] || new Date().toISOString().slice(0, 10)
                     };
 
-                    // Send delivery notification using template
-                    const deliveryMessage = this.whatsapp.templates.getDeliveryNotificationMessage(mappedOrderData, 'hindi');
-                    const result = await this.whatsapp.sendMessage(`${formattedPhone}@s.whatsapp.net`, deliveryMessage);
+                    // Send delivery notification using enhanced method with duplicate prevention
+                    const result = await this.whatsapp.sendDeliveryNotification(formattedPhone, mappedOrderData, 'tailor');
                     
-                    if (result) {
+                    if (result.success && !result.blocked) {
                         // Mark delivery as notified
                         await this.sheets.markDeliveryAsNotified(order, 'BOT');
                         logger.info(`Delivery notification sent successfully for order: ${orderId}`);
+                    } else if (result.blocked) {
+                        logger.info(`Delivery notification blocked (duplicate prevention): ${result.blockReason} for order ${orderId}`);
+                        await this.sheets.markDeliveryAsNotified(order, 'BOT');
                     } else {
-                        logger.error(`Failed to send delivery notification for order ${orderId}`);
+                        logger.error(`Failed to send delivery notification for order ${orderId}: ${result.error}`);
                     }
                 } catch (error) {
                     logger.error(`Error processing delivery notification for order ${orderId}:`, error.message);
@@ -1675,21 +1748,23 @@ class WhatsAppSheetBot {
 
                     logger.info(`Sending pickup reminder ${nextReminderCount} for order: ${orderId} (${daysPending} days pending)`);
 
-                    // Send pickup reminder message using template
+                    // Send pickup reminder using enhanced method with duplicate prevention
                     const pickupReminderData = {
                         ...mappedOrderData,
                         reminder_number: nextReminderCount,
                         days_pending: daysPending
                     };
-                    const pickupMessage = this.whatsapp.templates.getPickupReminderMessage(pickupReminderData, 'hindi');
-                    const result = await this.whatsapp.sendMessage(`${formattedPhone}@s.whatsapp.net`, pickupMessage);
+                    const result = await this.whatsapp.sendPickupReminder(formattedPhone, pickupReminderData, nextReminderCount, 'tailor');
                     
-                    if (result) {
+                    if (result.success && !result.blocked) {
                         // Mark pickup reminder as sent
                         await this.sheets.markPickupReminderSent(order, nextReminderCount, 'BOT');
                         logger.info(`Pickup reminder ${nextReminderCount} sent successfully for order: ${orderId}`);
+                    } else if (result.blocked) {
+                        logger.info(`Pickup reminder ${nextReminderCount} blocked (duplicate prevention): ${result.blockReason} for order ${orderId}`);
+                        await this.sheets.markPickupReminderSent(order, nextReminderCount, 'BOT');
                     } else {
-                        logger.error(`Failed to send pickup reminder for order ${orderId}`);
+                        logger.error(`Failed to send pickup reminder for order ${orderId}: ${result.error}`);
                     }
                 } catch (error) {
                     logger.error(`Error processing pickup reminder for order ${orderId}:`, error.message);
@@ -1753,22 +1828,24 @@ class WhatsAppSheetBot {
 
                     logger.info(`Sending payment reminder ${nextReminderCount} for order: ${orderId} (${daysPending} days since delivery)`);
 
-                    // Send payment reminder message using template
+                    // Send payment reminder using enhanced method with duplicate prevention
                     const paymentReminderData = {
                         ...mappedOrderData,
                         reminder_number: nextReminderCount,
                         days_pending: daysPending,
                         outstanding_amount: mappedOrderData.remaining_amount
                     };
-                    const paymentMessage = this.whatsapp.templates.getPaymentReminderMessage(paymentReminderData, 'hindi');
-                    const result = await this.whatsapp.sendMessage(`${formattedPhone}@s.whatsapp.net`, paymentMessage);
+                    const result = await this.whatsapp.sendPaymentReminder(formattedPhone, paymentReminderData, nextReminderCount, 'tailor');
                     
-                    if (result) {
+                    if (result.success && !result.blocked) {
                         // Mark payment reminder as sent
                         await this.sheets.markPaymentReminderSent(order, nextReminderCount, 'BOT');
                         logger.info(`Payment reminder ${nextReminderCount} sent successfully for order: ${orderId}`);
+                    } else if (result.blocked) {
+                        logger.info(`Payment reminder ${nextReminderCount} blocked (duplicate prevention): ${result.blockReason} for order ${orderId}`);
+                        await this.sheets.markPaymentReminderSent(order, nextReminderCount, 'BOT');
                     } else {
-                        logger.error(`Failed to send payment reminder for order ${orderId}`);
+                        logger.error(`Failed to send payment reminder for order ${orderId}: ${result.error}`);
                     }
                 } catch (error) {
                     logger.error(`Error processing payment reminder for order ${orderId}:`, error.message);
@@ -1832,16 +1909,18 @@ class WhatsAppSheetBot {
                             order_date: order['Purchase Date'] || new Date().toLocaleDateString('en-IN')
                         };
 
-                        // Send welcome message using template
-                        const fabricWelcomeMessage = this.whatsapp.templates.getFabricWelcomeMessage(mappedOrderData, 'hindi');
-                        const result = await this.whatsapp.sendMessage(`${formattedPhone}@s.whatsapp.net`, fabricWelcomeMessage);
+                        // Send fabric welcome message using enhanced method with duplicate prevention
+                        const result = await this.whatsapp.sendFabricWelcomeMessage(formattedPhone, mappedOrderData);
                         
-                        if (result) {
+                        if (result.success && !result.blocked) {
                             // Mark welcome as notified
                             await this.sheets.markFabricWelcomeAsNotified(order, 'BOT');
                             logger.info(`Fabric welcome message sent successfully for order: ${orderId}`);
+                        } else if (result.blocked) {
+                            logger.info(`Fabric welcome message blocked (duplicate prevention): ${result.blockReason} for order ${orderId}`);
+                            await this.sheets.markFabricWelcomeAsNotified(order, 'BOT');
                         } else {
-                            logger.error(`Failed to send fabric welcome message for order ${orderId}`);
+                            logger.error(`Failed to send fabric welcome message for order ${orderId}: ${result.error}`);
                         }
                     }
                 } catch (error) {
@@ -1898,16 +1977,18 @@ class WhatsAppSheetBot {
 
                     logger.info(`Sending fabric purchase notification for order: ${orderId}`);
 
-                    // Send purchase notification using template
-                    const fabricPurchaseMessage = this.whatsapp.templates.getFabricPurchaseMessage(mappedOrderData, 'hindi');
-                    const result = await this.whatsapp.sendMessage(`${formattedPhone}@s.whatsapp.net`, fabricPurchaseMessage);
+                    // Send fabric purchase notification using enhanced method with duplicate prevention
+                    const result = await this.whatsapp.sendFabricConfirmationMessage(formattedPhone, mappedOrderData);
                     
-                    if (result) {
+                    if (result.success && !result.blocked) {
                         // Mark purchase as notified
                         await this.sheets.markFabricPurchaseAsNotified(order, 'BOT');
                         logger.info(`Fabric purchase notification sent successfully for order: ${orderId}`);
+                    } else if (result.blocked) {
+                        logger.info(`Fabric purchase notification blocked (duplicate prevention): ${result.blockReason} for order ${orderId}`);
+                        await this.sheets.markFabricPurchaseAsNotified(order, 'BOT');
                     } else {
-                        logger.error(`Failed to send fabric purchase notification for order ${orderId}`);
+                        logger.error(`Failed to send fabric purchase notification for order ${orderId}: ${result.error}`);
                     }
                 } catch (error) {
                     logger.error(`Error processing fabric purchase notification for order ${orderId}:`, error.message);
@@ -1973,22 +2054,24 @@ class WhatsAppSheetBot {
 
                     logger.info(`Sending fabric payment reminder ${nextReminderCount} for order: ${orderId} (${daysPending} days pending)`);
 
-                    // Send payment reminder using template
+                    // Send fabric payment reminder using enhanced method with duplicate prevention
                     const fabricPaymentReminderData = {
                         ...mappedOrderData,
                         reminder_number: nextReminderCount,
                         days_pending: daysPending,
                         outstanding_amount: mappedOrderData.remaining_amount
                     };
-                    const fabricPaymentMessage = this.whatsapp.templates.getFabricPaymentReminderMessage(fabricPaymentReminderData, 'hindi');
-                    const result = await this.whatsapp.sendMessage(`${formattedPhone}@s.whatsapp.net`, fabricPaymentMessage);
+                    const result = await this.whatsapp.sendFabricPaymentReminder(formattedPhone, fabricPaymentReminderData, nextReminderCount);
                     
-                    if (result) {
+                    if (result.success && !result.blocked) {
                         // Mark payment reminder as sent
                         await this.sheets.markFabricPaymentReminderSent(order, nextReminderCount, 'BOT');
                         logger.info(`Fabric payment reminder ${nextReminderCount} sent successfully for order: ${orderId}`);
+                    } else if (result.blocked) {
+                        logger.info(`Fabric payment reminder ${nextReminderCount} blocked (duplicate prevention): ${result.blockReason} for order ${orderId}`);
+                        await this.sheets.markFabricPaymentReminderSent(order, nextReminderCount, 'BOT');
                     } else {
-                        logger.error(`Failed to send fabric payment reminder for order ${orderId}`);
+                        logger.error(`Failed to send fabric payment reminder for order ${orderId}: ${result.error}`);
                     }
                 } catch (error) {
                     logger.error(`Error processing fabric payment reminder for order ${orderId}:`, error.message);
@@ -2086,11 +2169,10 @@ class WhatsAppSheetBot {
 
                     logger.info(`Sending combined order message for order: ${combinedOrderId}`);
 
-                    // Send combined order message using template
-                    const combinedOrderMessage = this.whatsapp.templates.getCombinedOrderMessage(mappedOrderData, 'hindi');
-                    const result = await this.whatsapp.sendMessage(`${formattedPhone}@s.whatsapp.net`, combinedOrderMessage);
+                    // Send combined order message using enhanced method with duplicate prevention
+                    const result = await this.whatsapp.sendCombinedOrderMessage(formattedPhone, mappedOrderData);
                     
-                    if (result) {
+                    if (result.success && !result.blocked) {
                         // Mark combined order as notified
                         await this.sheets.markCombinedOrderAsNotified(combinedOrder, 'BOT');
                         
@@ -2100,8 +2182,13 @@ class WhatsAppSheetBot {
                         
                         logger.info(`Combined order message sent successfully for order: ${combinedOrderId}`);
                         logger.info(`Marked individual orders as confirmed: ${tailoringOrder['Order ID']} and ${fabricOrder['Order ID']}`);
+                    } else if (result.blocked) {
+                        logger.info(`Combined order message blocked (duplicate prevention): ${result.blockReason} for order ${combinedOrderId}`);
+                        await this.sheets.markCombinedOrderAsNotified(combinedOrder, 'BOT');
+                        await this.sheets.markConfirmationAsNotified(tailoringOrder, 'BOT');
+                        await this.sheets.markFabricConfirmationAsNotified(fabricOrder, 'BOT');
                     } else {
-                        logger.error(`Failed to send combined order message for order ${combinedOrderId}:`, result.error);
+                        logger.error(`Failed to send combined order message for order ${combinedOrderId}: ${result.error}`);
                     }
                 } catch (error) {
                     logger.error(`Error processing combined order ${combinedOrderId}:`, error.message);
@@ -2394,6 +2481,11 @@ class WhatsAppSheetBot {
             
             await this.whatsapp.disconnect();
             
+            // Release process lock
+            if (this.lockManager) {
+                await this.lockManager.releaseLock();
+            }
+            
             // Clear processed orders
             this.processedOrders.clear();
             
@@ -2450,16 +2542,16 @@ class WhatsAppSheetBot {
                         ...grandTotals
                     };
 
-                    // Get message template
-                    const message = this.whatsapp.templates.getWorkerDailyDataMessage(workerData, 'hindi');
-
-                    // Send message
-                    const result = await this.whatsapp.sendMessage(formattedPhone, message);
+                    // Send worker daily data message using enhanced method with duplicate prevention
+                    const result = await this.whatsapp.sendWorkerDailyDataMessage(formattedPhone, workerData);
                     
-                    if (result.success) {
+                    if (result.success && !result.blocked) {
                         // Mark as notified
                         await this.sheets.markWorkerDataAsNotified(entry);
                         logger.info(`Worker daily data sent successfully to ${workerName}`);
+                    } else if (result.blocked) {
+                        logger.info(`Worker daily data blocked (duplicate prevention): ${result.blockReason} for ${workerName}`);
+                        await this.sheets.markWorkerDataAsNotified(entry);
                     } else {
                         logger.error(`Failed to send worker data to ${workerName}: ${result.error}`);
                     }
@@ -2488,8 +2580,30 @@ process.on('SIGTERM', async () => {
     logger.info('Received SIGTERM, shutting down gracefully...');
     if (global.bot) {
         await global.bot.shutdown();
+        if (global.bot.lockManager) {
+            await global.bot.lockManager.releaseLock();
+        }
     }
     process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+    logger.info('Received SIGINT, shutting down gracefully...');
+    if (global.bot) {
+        await global.bot.shutdown();
+        if (global.bot.lockManager) {
+            await global.bot.lockManager.releaseLock();
+        }
+    }
+    process.exit(0);
+});
+
+process.on('uncaughtException', async (error) => {
+    logger.error('Uncaught Exception:', error);
+    if (global.bot && global.bot.lockManager) {
+        await global.bot.lockManager.releaseLock();
+    }
+    process.exit(1);
 });
 
 // Start the bot
