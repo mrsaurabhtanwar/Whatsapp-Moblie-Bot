@@ -150,6 +150,11 @@ class WhatsAppBot {
             
             // Initialize admin commands after WhatsApp connection
             this.initializeAdminCommands();
+            
+            // Start automatic polling after connection
+            setTimeout(() => {
+                this.startPolling();
+            }, 5000); // 5 second delay after connection
         });
 
         this.whatsapp?.on('disconnected', () => {
@@ -445,8 +450,240 @@ class WhatsAppBot {
         }
     }
 
+    // ==================== GOOGLE SHEETS INTEGRATION ====================
+    
+    async getAllOrders() {
+        try {
+            const allOrders = [];
+            
+            for (const config of this.sheetConfigs) {
+                try {
+                    const orders = await this.getSheetData(config);
+                    allOrders.push(...orders.map(order => ({
+                        ...order,
+                        sheetType: config.type,
+                        sheetName: config.name
+                    })));
+                } catch (error) {
+                    this.logger.error(`Failed to get orders from ${config.name}:`, error.message);
+                }
+            }
+            
+            return allOrders;
+        } catch (error) {
+            this.logger.error('Failed to get all orders:', error.message);
+            return [];
+        }
+    }
+    
+    async getSheetData(config) {
+        try {
+            const response = await this.sheets.spreadsheets.values.get({
+                spreadsheetId: config.id,
+                range: `${config.name}!A:Z`
+            });
+            
+            const rows = response.data.values || [];
+            if (rows.length <= 1) return [];
+            
+            const headers = rows[0];
+            const dataRows = rows.slice(1);
+            
+            return dataRows.map(row => {
+                const orderData = {};
+                headers.forEach((header, index) => {
+                    if (header && row[index]) {
+                        orderData[header] = row[index];
+                    }
+                });
+                return orderData;
+            });
+        } catch (error) {
+            this.logger.error(`Failed to get sheet data from ${config.name}:`, error.message);
+            return [];
+        }
+    }
+    
+    async processOrders() {
+        try {
+            if (!this.isConnected || !this.whatsapp) {
+                this.logger.warn('Cannot process orders: WhatsApp not connected');
+                return;
+            }
+            
+            this.logger.info('🔄 Processing orders from Google Sheets...');
+            
+            for (const config of this.sheetConfigs) {
+                try {
+                    await this.processSheetOrders(config);
+                } catch (error) {
+                    this.logger.error(`Failed to process ${config.name}:`, error.message);
+                }
+            }
+        } catch (error) {
+            this.logger.error('Failed to process orders:', error.message);
+        }
+    }
+    
+    async processSheetOrders(config) {
+        try {
+            const orders = await this.getSheetData(config);
+            
+            for (const order of orders) {
+                if (this.shouldSendNotification(order, config.type)) {
+                    await this.sendOrderNotification(order, config.type);
+                }
+            }
+        } catch (error) {
+            this.logger.error(`Failed to process orders from ${config.name}:`, error.message);
+        }
+    }
+    
+    shouldSendNotification(order, sheetType) {
+        try {
+            const status = (order['Delivery Status'] || order['Status'] || '').toLowerCase().trim();
+            const phone = order['Phone'] || order['Contact Info'] || order['Contact Number'];
+            const orderId = order['Order ID'] || order['Master Order ID'];
+            
+            // Basic validation
+            if (!phone || !orderId) {
+                return false;
+            }
+            
+            // Check notification flags
+            const readyNotified = order['Ready Notified'] || order['Ready Notification'];
+            const deliveryNotified = order['Delivery Notified'] || order['Delivery Notification'];
+            
+            // Determine message type based on status and notification flags
+            if (['ready', 'completed', 'pickup'].includes(status) && 
+                (!readyNotified || readyNotified.toLowerCase() === 'no')) {
+                return true; // Send ready notification
+            }
+            
+            if (['delivered', 'completed'].includes(status) && 
+                (!deliveryNotified || deliveryNotified.toLowerCase() === 'no')) {
+                return true; // Send delivery notification
+            }
+            
+            return false;
+        } catch (error) {
+            this.logger.error('Error checking notification conditions:', error.message);
+            return false;
+        }
+    }
+    
+    async sendOrderNotification(order, sheetType) {
+        try {
+            const phone = order['Phone'] || order['Contact Info'] || order['Contact Number'];
+            const orderId = order['Order ID'] || order['Master Order ID'];
+            const status = (order['Delivery Status'] || order['Status'] || '').toLowerCase().trim();
+            
+            if (!phone || !orderId) {
+                this.logger.warn('Cannot send notification: missing phone or order ID');
+                return;
+            }
+            
+            // Format phone number
+            const formattedPhone = phone.replace(/\D/g, '');
+            if (!formattedPhone.startsWith('91')) {
+                const formattedPhone = '91' + formattedPhone;
+            }
+            
+            // Determine message type and send appropriate notification
+            if (['ready', 'completed', 'pickup'].includes(status)) {
+                await this.whatsapp.sendOrderReadyMessage(formattedPhone, order, sheetType);
+                this.logger.info(`📤 Sent ready notification for order ${orderId} to ${formattedPhone}`);
+            } else if (['delivered', 'completed'].includes(status)) {
+                await this.whatsapp.sendDeliveryNotification(formattedPhone, order, sheetType);
+                this.logger.info(`📤 Sent delivery notification for order ${orderId} to ${formattedPhone}`);
+            }
+            
+        } catch (error) {
+            this.logger.error('Failed to send order notification:', error.message);
+        }
+    }
+    
+    async getOrderById(orderId) {
+        try {
+            const allOrders = await this.getAllOrders();
+            return allOrders.find(order => 
+                order['Order ID'] === orderId || 
+                order['Master Order ID'] === orderId
+            );
+        } catch (error) {
+            this.logger.error('Failed to get order by ID:', error.message);
+            return null;
+        }
+    }
+    
+    async healthCheck() {
+        try {
+            // Test Google Sheets connection
+            const testSheet = this.sheetConfigs[0];
+            if (testSheet) {
+                await this.sheets.spreadsheets.get({
+                    spreadsheetId: testSheet.id,
+                    fields: 'properties.title'
+                });
+            }
+            
+            return {
+                status: 'healthy',
+                sheets: 'connected',
+                whatsapp: this.isConnected ? 'connected' : 'disconnected'
+            };
+        } catch (error) {
+            return {
+                status: 'error',
+                error: error.message,
+                sheets: 'error',
+                whatsapp: this.isConnected ? 'connected' : 'disconnected'
+            };
+        }
+    }
+    
+    // ==================== POLLING INTEGRATION ====================
+    
+    startPolling() {
+        if (this.isPolling) {
+            this.logger.warn('Polling already started');
+            return;
+        }
+        
+        this.isPolling = true;
+        this.logger.info('🔄 Starting order polling...');
+        
+        // Initial process
+        this.processOrders();
+        
+        // Set up interval (every 3 minutes)
+        this.pollingInterval = setInterval(() => {
+            if (this.isPolling) {
+                this.processOrders();
+            }
+        }, 180000); // 3 minutes
+        
+        this.logger.info('✅ Order polling started (3-minute intervals)');
+    }
+    
+    stopPolling() {
+        if (!this.isPolling) {
+            this.logger.warn('Polling not started');
+            return;
+        }
+        
+        this.isPolling = false;
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+            this.pollingInterval = null;
+        }
+        
+        this.logger.info('⏹️ Order polling stopped');
+    }
+
     async cleanup() {
         try {
+            this.stopPolling();
             await this.lockManager.releaseLock();
             this.logger.info('✅ Cleanup completed');
         } catch (error) {
