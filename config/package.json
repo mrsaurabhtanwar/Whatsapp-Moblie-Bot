@@ -2,23 +2,21 @@
   "name": "whatsapp-sheet-bot",
   "version": "2.0.0",
   "description": "Self-hosted WhatsApp notification bot that polls Google Sheets for orders and sends messages via Baileys",
-  "main": "src/core/bot.js",
+  "main": "worker.js",
   "scripts": {
-    "start": "node src/core/bot.js",
-    "dev": "node src/core/bot.js",
+    "start": "node worker.js",
+    "dev": "node worker.js",
+    "worker": "node worker.js",
     "legacy": "node main-bot.js",
-    "test": "node scripts/test-bot.js",
-    "test:developer": "node scripts/test-developer-whitelist.js",
-    "pm2:start": "pm2 start config/ecosystem.config.js",
+    "tailor": "node tailor-bot.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
     "pm2:stop": "pm2 stop whatsapp-sheet-bot",
     "pm2:restart": "pm2 restart whatsapp-sheet-bot",
     "pm2:logs": "pm2 logs whatsapp-sheet-bot",
     "pm2:status": "pm2 status",
     "setup": "npm install && echo Setup complete!",
     "deploy": "npm run pm2:start && pm2 save && pm2 startup",
-    "monitor": "pm2 monit",
-    "clean": "node scripts/cleanup.js",
-    "organize": "node scripts/organize.js"
+    "monitor": "pm2 monit"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.6.0",
@@ -51,13 +49,5 @@
     "automation"
   ],
   "author": "WhatsApp Sheet Bot Developer",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/your-username/whatsapp-sheet-bot.git"
-  },
-  "bugs": {
-    "url": "https://github.com/your-username/whatsapp-sheet-bot/issues"
-  },
-  "homepage": "https://github.com/your-username/whatsapp-sheet-bot#readme"
+  "license": "MIT"
 }

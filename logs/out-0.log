@@ -50530,3 +50530,987 @@
 2025-09-19T10:41:44: [INFO] Initializing WhatsApp client...
 2025-09-19T10:41:44: 🔄 Initializing WhatsApp client...
 2025-09-19T10:41:44: [INFO] WhatsApp client initialized
+2025-09-19T11:51:15: [INFO] Effective Google Sheets IDs {
+  GOOGLE_SHEET_ID: '128vwp1tjsej9itNAkQY1Y-5sJsMv3N1TZi5Pl9Wgn6Y',
+  FABRIC_SHEET_ID: '1tFb4EBzzvdmDNY0bOtyTXAhX1aRqzfq7NzXLhDqYj0o',
+  COMBINED_SHEET_ID: '199mFt3yz1cZQUGcF84pZgNQoxCpOS2gHxFGDD71CZVg',
+  WORKER_SHEET_ID: '1msVf01VuWsk1mhSMVrvypq_7ubSVjDKlr8aG-6bqE7Q',
+  GOOGLE_SHEET_NAME: 'Orders',
+  WORKER_SHEET_NAME: 'Payment_Daily_Entry'
+}
+2025-09-19T11:51:15: ✅ Optimized Message Templates initialized (Hindi only)
+2025-09-19T11:51:15: 📝 Loaded 12 template types
+2025-09-19T11:51:15: 🔧 WhatsApp Authentication Configuration:
+2025-09-19T11:51:15:    Auth Mode: both
+2025-09-19T11:51:15:    QR Enabled: true
+2025-09-19T11:51:15:    Phone Enabled: true
+2025-09-19T11:51:15:    Session Persistence: true
+2025-09-19T11:51:15:    Max Reconnect Attempts: 10
+2025-09-19T11:51:15:    Default Phone: None
+2025-09-19T11:51:15: 🔒 Session validation enabled (check every 300s)
+2025-09-19T11:51:15: 🔧 WhatsApp client initialized with auth mode: both
+2025-09-19T11:51:15: ℹ️ [11:51:15 am] INFO: Enhanced Safety Manager initialization started {
+  startupTime: 1758262875604,
+  gracePeriodMs: 240000,
+  dataDir: './safety-data',
+  dbPath: 'safety-data\\safety-database.db',
+  processId: 1532,
+  nodeVersion: 'v22.19.0'
+}
+2025-09-19T11:51:15: 🛡️ Enhanced WhatsApp Client with comprehensive safety initialized
+2025-09-19T11:51:15: ⏰ 4-minute startup delay active
+2025-09-19T11:51:15: 🔒 Triple-layer duplicate prevention enabled
+2025-09-19T11:51:15: ⚡ Circuit breaker limits: Daily=10, Hourly=3
+2025-09-19T11:51:15: [INFO] Using PQueue for job processing
+2025-09-19T11:51:15: [INFO] Memory management setup completed
+2025-09-19T11:51:15: [INFO] Starting WhatsApp Bot...
+2025-09-19T11:51:15: [INFO] Checking process locks...
+2025-09-19T11:51:15: 📁 Loaded 0 sent messages from file
+2025-09-19T11:51:15: ℹ️ [11:51:15 am] INFO: Data directory created/verified { dataDir: './safety-data' }
+2025-09-19T11:51:15: 📁 Loaded 0 customer histories from file
+2025-09-19T11:51:15: [INFO] Process locks acquired successfully
+2025-09-19T11:51:15: [INFO] Logs directory created
+2025-09-19T11:51:15: [INFO] Initializing Google Sheets helper...
+2025-09-19T11:51:15: [11:51:15 am] 🔑 Initializing Google Sheets API...
+2025-09-19T11:51:15: [11:51:15 am] ✅ Google Sheets API initialized
+2025-09-19T11:51:15: [INFO] Google Sheets helper initialized
+2025-09-19T11:51:15: 🗑️ Deleted old log file: bot-2025-09-19T05-45-51-260Z.log
+2025-09-19T11:51:15: 📝 Enhanced Logger initialized
+2025-09-19T11:51:15: 📁 Loaded 0 message hashes from file
+2025-09-19T11:51:15: ℹ️ [11:51:15 am] INFO: SQLite database initialized { dbPath: 'safety-data\\safety-database.db' }
+2025-09-19T11:51:15: 📁 Loaded statistics from file
+2025-09-19T11:51:15: ✅ Duplicate Prevention Manager initialized
+2025-09-19T11:51:15: 📊 Loaded: 0 sent messages, 0 customer histories, 0 content hashes
+2025-09-19T11:51:15: 🧹 Removed stale process lock
+2025-09-19T11:51:15: 🔒 Process lock acquired (PID: 1532)
+2025-09-19T11:51:15: ℹ️ [11:51:15 am] INFO: Process isolation enforced {
+  lockFile: 'safety-data\\process.lock',
+  pidFile: 'safety-data\\process.pid',
+  processId: 1532
+}
+2025-09-19T11:51:15: ⏰ Starting 240 second startup grace period...
+2025-09-19T11:51:15: 🚫 All message sending is BLOCKED during grace period
+2025-09-19T11:51:15: ℹ️ [11:51:15 am] INFO: Grace Period: STARTED {
+  action: 'STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758262875604, processId: 1532 },
+  timestamp: 1758262875675
+}
+2025-09-19T11:51:15: ℹ️ [11:51:15 am] INFO: Grace Period: GRACE_PERIOD_STARTED {
+  action: 'GRACE_PERIOD_STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758262875604, willExpireAt: 1758263115604 },
+  timestamp: 1758262875675
+}
+2025-09-19T11:51:15: 🛡️ Enhanced Safety Manager initialized
+2025-09-19T11:51:15: ⏰ Startup grace period: 240 seconds
+2025-09-19T11:51:15: 📋 Message rules loaded: 8 types
+2025-09-19T11:51:15: ℹ️ [11:51:15 am] INFO: Enhanced Safety Manager initialization completed successfully {
+  initializationDuration: 72,
+  gracePeriodActive: true,
+  messageRulesCount: 8,
+  messageTypes: [
+    'welcome',
+    'confirmation',
+    'ready',
+    'delivery',
+    'pickup_reminder',
+    'payment_reminder',
+    'fabric_welcome',
+    'fabric_purchase'
+  ],
+  circuitBreakerLimits: { daily: 10, hourly: 3, similarity: 0.8 },
+  databaseReady: true,
+  loggerReady: true,
+  processIsolationActive: true
+}
+2025-09-19T11:51:16: [INFO] Sheets health after init { status: 'healthy' }
+2025-09-19T11:51:16: [INFO] Initializing WhatsApp client...
+2025-09-19T11:51:16: 🔄 Initializing Enhanced WhatsApp Client...
+2025-09-19T11:51:16: ℹ️ [11:51:16 am] INFO: Enhanced Safety Manager initialization started {
+  startupTime: 1758262875604,
+  gracePeriodMs: 240000,
+  dataDir: './safety-data',
+  dbPath: 'safety-data\\safety-database.db',
+  processId: 1532,
+  nodeVersion: 'v22.19.0'
+}
+2025-09-19T11:51:16: ℹ️ [11:51:16 am] INFO: Data directory created/verified { dataDir: './safety-data' }
+2025-09-19T11:51:16: ℹ️ [11:51:16 am] INFO: SQLite database initialized { dbPath: 'safety-data\\safety-database.db' }
+2025-09-19T11:51:16: 🧹 Removed stale process lock
+2025-09-19T11:51:16: 🔒 Process lock acquired (PID: 1532)
+2025-09-19T11:51:16: ℹ️ [11:51:16 am] INFO: Process isolation enforced {
+  lockFile: 'safety-data\\process.lock',
+  pidFile: 'safety-data\\process.pid',
+  processId: 1532
+}
+2025-09-19T11:51:16: ⏰ Starting 240 second startup grace period...
+2025-09-19T11:51:16: 🚫 All message sending is BLOCKED during grace period
+2025-09-19T11:51:16: ℹ️ [11:51:16 am] INFO: Grace Period: STARTED {
+  action: 'STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758262875604, processId: 1532 },
+  timestamp: 1758262876763
+}
+2025-09-19T11:51:16: ℹ️ [11:51:16 am] INFO: Grace Period: GRACE_PERIOD_STARTED {
+  action: 'GRACE_PERIOD_STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758262875604, willExpireAt: 1758263115604 },
+  timestamp: 1758262876763
+}
+2025-09-19T11:51:16: 🛡️ Enhanced Safety Manager initialized
+2025-09-19T11:51:16: ⏰ Startup grace period: 240 seconds
+2025-09-19T11:51:16: 📋 Message rules loaded: 8 types
+2025-09-19T11:51:16: ℹ️ [11:51:16 am] INFO: Enhanced Safety Manager initialization completed successfully {
+  initializationDuration: 1162,
+  gracePeriodActive: true,
+  messageRulesCount: 8,
+  messageTypes: [
+    'welcome',
+    'confirmation',
+    'ready',
+    'delivery',
+    'pickup_reminder',
+    'payment_reminder',
+    'fabric_welcome',
+    'fabric_purchase'
+  ],
+  circuitBreakerLimits: { daily: 10, hourly: 3, similarity: 0.8 },
+  databaseReady: true,
+  loggerReady: true,
+  processIsolationActive: true
+}
+2025-09-19T11:51:16: ✅ Safety Manager initialized
+2025-09-19T11:51:16: 📁 Loaded 0 sent messages from file
+2025-09-19T11:51:16: 📁 Loaded 0 customer histories from file
+2025-09-19T11:51:16: 📁 Loaded 0 message hashes from file
+2025-09-19T11:51:16: 📁 Loaded statistics from file
+2025-09-19T11:51:16: ✅ Duplicate Prevention Manager initialized
+2025-09-19T11:51:16: 📊 Loaded: 0 sent messages, 0 customer histories, 0 content hashes
+2025-09-19T11:51:16: ✅ Duplicate Prevention Manager initialized
+2025-09-19T11:51:16: 🛡️ Enhanced WhatsApp Client fully initialized
+2025-09-19T11:51:16: [INFO] WhatsApp client initialized
+2025-09-19T11:51:16: [INFO] Starting Express server...
+2025-09-19T11:51:16: [INFO] Express server started
+2025-09-19T11:51:16: [INFO] WhatsApp Sheet Bot server running on http://localhost:3001
+2025-09-19T11:51:16: [INFO] QR Code available at: http://localhost:3001/qr
+2025-09-19T11:51:23: [INFO] Dashboard accessed {
+  hasQRCode: false,
+  hasQRDataURL: false,
+  qrCodeType: 'object',
+  qrCodeLength: 0,
+  connectionStatus: {
+    connected: false,
+    connectionAttempts: 0,
+    maxAttempts: 60,
+    state: 'disconnected'
+  }
+}
+2025-09-19T11:51:26: [INFO] Dashboard accessed {
+  hasQRCode: false,
+  hasQRDataURL: false,
+  qrCodeType: 'object',
+  qrCodeLength: 0,
+  connectionStatus: {
+    connected: false,
+    connectionAttempts: 0,
+    maxAttempts: 60,
+    state: 'disconnected'
+  }
+}
+2025-09-19T11:51:26: [INFO] Dashboard accessed {
+  hasQRCode: false,
+  hasQRDataURL: false,
+  qrCodeType: 'object',
+  qrCodeLength: 0,
+  connectionStatus: {
+    connected: false,
+    connectionAttempts: 0,
+    maxAttempts: 60,
+    state: 'disconnected'
+  }
+}
+2025-09-19T18:33:09: ✅ Optimized Message Templates initialized (Hindi only)
+2025-09-19T18:33:09: 📝 Loaded 12 template types
+2025-09-19T18:33:09: 🔧 WhatsApp Authentication Configuration:
+2025-09-19T18:33:09:    Auth Mode: both
+2025-09-19T18:33:09:    QR Enabled: true
+2025-09-19T18:33:09:    Phone Enabled: true
+2025-09-19T18:33:09:    Session Persistence: true
+2025-09-19T18:33:09:    Max Reconnect Attempts: 10
+2025-09-19T18:33:09:    Default Phone: None
+2025-09-19T18:33:09: 🔒 Session validation enabled (check every 300s)
+2025-09-19T18:33:09: 🔧 WhatsApp client initialized with auth mode: both
+2025-09-19T18:33:09: ℹ️ [6:33:09 pm] INFO: Enhanced Safety Manager initialization started {
+  startupTime: 1758286989240,
+  gracePeriodMs: 240000,
+  dataDir: './safety-data',
+  dbPath: 'safety-data\\safety-database.db',
+  processId: 18000,
+  nodeVersion: 'v22.19.0'
+}
+2025-09-19T18:33:09: 🛡️ Enhanced WhatsApp Client with comprehensive safety initialized
+2025-09-19T18:33:09: ⏰ 4-minute startup delay active
+2025-09-19T18:33:09: 🔒 Triple-layer duplicate prevention enabled
+2025-09-19T18:33:09: ⚡ Circuit breaker limits: Daily=10, Hourly=3
+2025-09-19T18:33:09: 🔄 Initializing Enhanced WhatsApp Client...
+2025-09-19T18:33:09: ℹ️ [6:33:09 pm] INFO: Enhanced Safety Manager initialization started {
+  startupTime: 1758286989240,
+  gracePeriodMs: 240000,
+  dataDir: './safety-data',
+  dbPath: 'safety-data\\safety-database.db',
+  processId: 18000,
+  nodeVersion: 'v22.19.0'
+}
+2025-09-19T18:33:09: 📁 Loaded 0 sent messages from file
+2025-09-19T18:33:09: ℹ️ [6:33:09 pm] INFO: Data directory created/verified { dataDir: './safety-data' }
+2025-09-19T18:33:09: ℹ️ [6:33:09 pm] INFO: Data directory created/verified { dataDir: './safety-data' }
+2025-09-19T18:33:09: 📁 Loaded 0 customer histories from file
+2025-09-19T18:33:09: 📁 Loaded 0 message hashes from file
+2025-09-19T18:33:09: ℹ️ [6:33:09 pm] INFO: SQLite database initialized { dbPath: 'safety-data\\safety-database.db' }
+2025-09-19T18:33:09: ℹ️ [6:33:09 pm] INFO: SQLite database initialized { dbPath: 'safety-data\\safety-database.db' }
+2025-09-19T18:33:09: 📁 Loaded statistics from file
+2025-09-19T18:33:09: ✅ Duplicate Prevention Manager initialized
+2025-09-19T18:33:09: 📊 Loaded: 0 sent messages, 0 customer histories, 0 content hashes
+2025-09-19T18:33:09: 🗑️ Deleted old log file: bot-2025-09-19T07-05-09-358Z.log
+2025-09-19T18:33:09: 📝 Enhanced Logger initialized
+2025-09-19T18:33:09: 🧹 Removed stale process lock
+2025-09-19T18:33:09: 🧹 Removed stale process lock
+2025-09-19T18:33:09: 🔒 Process lock acquired (PID: 18000)
+2025-09-19T18:33:09: 🔒 Process lock acquired (PID: 18000)
+2025-09-19T18:33:09: ℹ️ [6:33:09 pm] INFO: Process isolation enforced {
+  lockFile: 'safety-data\\process.lock',
+  pidFile: 'safety-data\\process.pid',
+  processId: 18000
+}
+2025-09-19T18:33:09: ⏰ Starting 240 second startup grace period...
+2025-09-19T18:33:09: 🚫 All message sending is BLOCKED during grace period
+2025-09-19T18:33:09: ℹ️ [6:33:09 pm] INFO: Process isolation enforced {
+  lockFile: 'safety-data\\process.lock',
+  pidFile: 'safety-data\\process.pid',
+  processId: 18000
+}
+2025-09-19T18:33:09: ⏰ Starting 240 second startup grace period...
+2025-09-19T18:33:09: 🚫 All message sending is BLOCKED during grace period
+2025-09-19T18:33:09: ℹ️ [6:33:09 pm] INFO: Grace Period: STARTED {
+  action: 'STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758286989240, processId: 18000 },
+  timestamp: 1758286989405
+}
+2025-09-19T18:33:09: ℹ️ [6:33:09 pm] INFO: Grace Period: GRACE_PERIOD_STARTED {
+  action: 'GRACE_PERIOD_STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758286989240, willExpireAt: 1758287229240 },
+  timestamp: 1758286989406
+}
+2025-09-19T18:33:09: 🛡️ Enhanced Safety Manager initialized
+2025-09-19T18:33:09: ⏰ Startup grace period: 240 seconds
+2025-09-19T18:33:09: 📋 Message rules loaded: 8 types
+2025-09-19T18:33:09: ℹ️ [6:33:09 pm] INFO: Grace Period: STARTED {
+  action: 'STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758286989240, processId: 18000 },
+  timestamp: 1758286989408
+}
+2025-09-19T18:33:09: ℹ️ [6:33:09 pm] INFO: Grace Period: GRACE_PERIOD_STARTED {
+  action: 'GRACE_PERIOD_STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758286989240, willExpireAt: 1758287229240 },
+  timestamp: 1758286989408
+}
+2025-09-19T18:33:09: 🛡️ Enhanced Safety Manager initialized
+2025-09-19T18:33:09: ⏰ Startup grace period: 240 seconds
+2025-09-19T18:33:09: 📋 Message rules loaded: 8 types
+2025-09-19T18:33:09: ℹ️ [6:33:09 pm] INFO: Enhanced Safety Manager initialization completed successfully {
+  initializationDuration: 171,
+  gracePeriodActive: true,
+  messageRulesCount: 8,
+  messageTypes: [
+    'welcome',
+    'confirmation',
+    'ready',
+    'delivery',
+    'pickup_reminder',
+    'payment_reminder',
+    'fabric_welcome',
+    'fabric_purchase'
+  ],
+  circuitBreakerLimits: { daily: 10, hourly: 3, similarity: 0.8 },
+  databaseReady: true,
+  loggerReady: true,
+  processIsolationActive: true
+}
+2025-09-19T18:33:09: ℹ️ [6:33:09 pm] INFO: Enhanced Safety Manager initialization completed successfully {
+  initializationDuration: 174,
+  gracePeriodActive: true,
+  messageRulesCount: 8,
+  messageTypes: [
+    'welcome',
+    'confirmation',
+    'ready',
+    'delivery',
+    'pickup_reminder',
+    'payment_reminder',
+    'fabric_welcome',
+    'fabric_purchase'
+  ],
+  circuitBreakerLimits: { daily: 10, hourly: 3, similarity: 0.8 },
+  databaseReady: true,
+  loggerReady: true,
+  processIsolationActive: true
+}
+2025-09-19T18:33:09: ✅ Safety Manager initialized
+2025-09-19T18:33:09: 📁 Loaded 0 sent messages from file
+2025-09-19T18:33:09: 📁 Loaded 0 customer histories from file
+2025-09-19T18:33:09: 📁 Loaded 0 message hashes from file
+2025-09-19T18:33:09: 📁 Loaded statistics from file
+2025-09-19T18:33:09: ✅ Duplicate Prevention Manager initialized
+2025-09-19T18:33:09: 📊 Loaded: 0 sent messages, 0 customer histories, 0 content hashes
+2025-09-19T18:33:09: ✅ Duplicate Prevention Manager initialized
+2025-09-19T18:33:09: 🔄 Starting WhatsApp connection...
+2025-09-19T18:33:09: 🔄 Initializing WhatsApp client...
+2025-09-19T18:33:09: ✅ WhatsApp connection started
+2025-09-19T18:33:09: 🛡️ Enhanced WhatsApp Client fully initialized
+2025-09-19T18:33:09: ⚠️ Google Sheets integration disabled (no service account key)
+2025-09-19T18:33:09: ✅ WhatsApp QR Bot initialized successfully
+2025-09-19T18:33:09: 📞 Attempting to request pairing code...
+2025-09-19T18:33:09: 💡 To use phone authentication:
+2025-09-19T18:33:09:    1. Use the dashboard at http://localhost:3001
+2025-09-19T18:33:09:    2. Select "Phone Number Authentication"
+2025-09-19T18:33:09:    3. Enter your phone number
+2025-09-19T18:33:09:    4. Get the pairing code and enter it in WhatsApp
+2025-09-19T18:33:09: 🔄 Connecting to WhatsApp...
+2025-09-19T18:33:09: 🚀 WhatsApp QR Bot running on http://localhost:3001
+2025-09-19T18:33:09: 📱 Open the dashboard to scan QR code and connect WhatsApp
+2025-09-19T18:33:15: 🔌 Connection closed. Reason: undefined
+2025-09-19T18:33:15: 🔄 Reconnecting in 1s... (Attempt 1/10)
+2025-09-19T18:33:16: 🔄 Initializing Enhanced WhatsApp Client...
+2025-09-19T18:33:16: ℹ️ [6:33:16 pm] INFO: Enhanced Safety Manager initialization started {
+  startupTime: 1758286989240,
+  gracePeriodMs: 240000,
+  dataDir: './safety-data',
+  dbPath: 'safety-data\\safety-database.db',
+  processId: 18000,
+  nodeVersion: 'v22.19.0'
+}
+2025-09-19T18:33:16: ℹ️ [6:33:16 pm] INFO: Data directory created/verified { dataDir: './safety-data' }
+2025-09-19T18:33:16: ℹ️ [6:33:16 pm] INFO: SQLite database initialized { dbPath: 'safety-data\\safety-database.db' }
+2025-09-19T18:33:16: 🧹 Removed stale process lock
+2025-09-19T18:33:16: 🔒 Process lock acquired (PID: 18000)
+2025-09-19T18:33:16: ℹ️ [6:33:16 pm] INFO: Process isolation enforced {
+  lockFile: 'safety-data\\process.lock',
+  pidFile: 'safety-data\\process.pid',
+  processId: 18000
+}
+2025-09-19T18:33:16: ⏰ Starting 240 second startup grace period...
+2025-09-19T18:33:16: 🚫 All message sending is BLOCKED during grace period
+2025-09-19T18:33:16: ℹ️ [6:33:16 pm] INFO: Grace Period: STARTED {
+  action: 'STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758286989240, processId: 18000 },
+  timestamp: 1758286996520
+}
+2025-09-19T18:33:16: ℹ️ [6:33:16 pm] INFO: Grace Period: GRACE_PERIOD_STARTED {
+  action: 'GRACE_PERIOD_STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758286989240, willExpireAt: 1758287229240 },
+  timestamp: 1758286996521
+}
+2025-09-19T18:33:16: 🛡️ Enhanced Safety Manager initialized
+2025-09-19T18:33:16: ⏰ Startup grace period: 240 seconds
+2025-09-19T18:33:16: 📋 Message rules loaded: 8 types
+2025-09-19T18:33:16: ℹ️ [6:33:16 pm] INFO: Enhanced Safety Manager initialization completed successfully {
+  initializationDuration: 7283,
+  gracePeriodActive: true,
+  messageRulesCount: 8,
+  messageTypes: [
+    'welcome',
+    'confirmation',
+    'ready',
+    'delivery',
+    'pickup_reminder',
+    'payment_reminder',
+    'fabric_welcome',
+    'fabric_purchase'
+  ],
+  circuitBreakerLimits: { daily: 10, hourly: 3, similarity: 0.8 },
+  databaseReady: true,
+  loggerReady: true,
+  processIsolationActive: true
+}
+2025-09-19T18:33:16: ✅ Safety Manager initialized
+2025-09-19T18:33:16: 📁 Loaded 0 sent messages from file
+2025-09-19T18:33:16: 📁 Loaded 0 customer histories from file
+2025-09-19T18:33:16: 📁 Loaded 0 message hashes from file
+2025-09-19T18:33:16: 📁 Loaded statistics from file
+2025-09-19T18:33:16: ✅ Duplicate Prevention Manager initialized
+2025-09-19T18:33:16: 📊 Loaded: 0 sent messages, 0 customer histories, 0 content hashes
+2025-09-19T18:33:16: ✅ Duplicate Prevention Manager initialized
+2025-09-19T18:33:16: 🔄 Starting WhatsApp connection...
+2025-09-19T18:33:16: 🔄 Initializing WhatsApp client...
+2025-09-19T18:33:16: ✅ WhatsApp connection started
+2025-09-19T18:33:16: 🛡️ Enhanced WhatsApp Client fully initialized
+2025-09-19T18:33:16: 📞 Attempting to request pairing code...
+2025-09-19T18:33:16: 💡 To use phone authentication:
+2025-09-19T18:33:16:    1. Use the dashboard at http://localhost:3001
+2025-09-19T18:33:16:    2. Select "Phone Number Authentication"
+2025-09-19T18:33:16:    3. Enter your phone number
+2025-09-19T18:33:16:    4. Get the pairing code and enter it in WhatsApp
+2025-09-19T18:33:16: 🔄 Connecting to WhatsApp...
+2025-09-19T18:33:18: 🔌 Connection closed. Reason: undefined
+2025-09-19T18:33:18: 🔄 Reconnecting in 2s... (Attempt 2/10)
+2025-09-19T18:33:20: 🔄 Initializing Enhanced WhatsApp Client...
+2025-09-19T18:33:20: ℹ️ [6:33:20 pm] INFO: Enhanced Safety Manager initialization started {
+  startupTime: 1758286989240,
+  gracePeriodMs: 240000,
+  dataDir: './safety-data',
+  dbPath: 'safety-data\\safety-database.db',
+  processId: 18000,
+  nodeVersion: 'v22.19.0'
+}
+2025-09-19T18:33:20: ℹ️ [6:33:20 pm] INFO: Data directory created/verified { dataDir: './safety-data' }
+2025-09-19T18:33:20: ℹ️ [6:33:20 pm] INFO: SQLite database initialized { dbPath: 'safety-data\\safety-database.db' }
+2025-09-19T18:33:20: 🧹 Removed stale process lock
+2025-09-19T18:33:20: 🔒 Process lock acquired (PID: 18000)
+2025-09-19T18:33:20: ℹ️ [6:33:20 pm] INFO: Process isolation enforced {
+  lockFile: 'safety-data\\process.lock',
+  pidFile: 'safety-data\\process.pid',
+  processId: 18000
+}
+2025-09-19T18:33:20: ⏰ Starting 240 second startup grace period...
+2025-09-19T18:33:20: 🚫 All message sending is BLOCKED during grace period
+2025-09-19T18:33:20: ℹ️ [6:33:20 pm] INFO: Grace Period: STARTED {
+  action: 'STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758286989240, processId: 18000 },
+  timestamp: 1758287000275
+}
+2025-09-19T18:33:20: ℹ️ [6:33:20 pm] INFO: Grace Period: GRACE_PERIOD_STARTED {
+  action: 'GRACE_PERIOD_STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758286989240, willExpireAt: 1758287229240 },
+  timestamp: 1758287000276
+}
+2025-09-19T18:33:20: 🛡️ Enhanced Safety Manager initialized
+2025-09-19T18:33:20: ⏰ Startup grace period: 240 seconds
+2025-09-19T18:33:20: 📋 Message rules loaded: 8 types
+2025-09-19T18:33:20: ℹ️ [6:33:20 pm] INFO: Enhanced Safety Manager initialization completed successfully {
+  initializationDuration: 11039,
+  gracePeriodActive: true,
+  messageRulesCount: 8,
+  messageTypes: [
+    'welcome',
+    'confirmation',
+    'ready',
+    'delivery',
+    'pickup_reminder',
+    'payment_reminder',
+    'fabric_welcome',
+    'fabric_purchase'
+  ],
+  circuitBreakerLimits: { daily: 10, hourly: 3, similarity: 0.8 },
+  databaseReady: true,
+  loggerReady: true,
+  processIsolationActive: true
+}
+2025-09-19T18:33:20: ✅ Safety Manager initialized
+2025-09-19T18:33:20: 📁 Loaded 0 sent messages from file
+2025-09-19T18:33:20: 📁 Loaded 0 customer histories from file
+2025-09-19T18:33:20: 📁 Loaded 0 message hashes from file
+2025-09-19T18:33:20: 📁 Loaded statistics from file
+2025-09-19T18:33:20: ✅ Duplicate Prevention Manager initialized
+2025-09-19T18:33:20: 📊 Loaded: 0 sent messages, 0 customer histories, 0 content hashes
+2025-09-19T18:33:20: ✅ Duplicate Prevention Manager initialized
+2025-09-19T18:33:20: 🔄 Starting WhatsApp connection...
+2025-09-19T18:33:20: 🔄 Initializing WhatsApp client...
+2025-09-19T18:33:20: ✅ WhatsApp connection started
+2025-09-19T18:33:20: 🛡️ Enhanced WhatsApp Client fully initialized
+2025-09-19T18:33:20: 📞 Attempting to request pairing code...
+2025-09-19T18:33:20: 💡 To use phone authentication:
+2025-09-19T18:33:20:    1. Use the dashboard at http://localhost:3001
+2025-09-19T18:33:20:    2. Select "Phone Number Authentication"
+2025-09-19T18:33:20:    3. Enter your phone number
+2025-09-19T18:33:20:    4. Get the pairing code and enter it in WhatsApp
+2025-09-19T18:33:20: 🔄 Connecting to WhatsApp...
+2025-09-19T18:33:25: 🔌 Connection closed. Reason: undefined
+2025-09-19T18:33:25: 🔄 Reconnecting in 4s... (Attempt 3/10)
+2025-09-19T18:33:29: 🔄 Initializing Enhanced WhatsApp Client...
+2025-09-19T18:33:29: ℹ️ [6:33:29 pm] INFO: Enhanced Safety Manager initialization started {
+  startupTime: 1758286989240,
+  gracePeriodMs: 240000,
+  dataDir: './safety-data',
+  dbPath: 'safety-data\\safety-database.db',
+  processId: 18000,
+  nodeVersion: 'v22.19.0'
+}
+2025-09-19T18:33:29: ℹ️ [6:33:29 pm] INFO: Data directory created/verified { dataDir: './safety-data' }
+2025-09-19T18:33:29: ℹ️ [6:33:29 pm] INFO: SQLite database initialized { dbPath: 'safety-data\\safety-database.db' }
+2025-09-19T18:33:29: 🧹 Removed stale process lock
+2025-09-19T18:33:29: 🔒 Process lock acquired (PID: 18000)
+2025-09-19T18:33:29: ℹ️ [6:33:29 pm] INFO: Process isolation enforced {
+  lockFile: 'safety-data\\process.lock',
+  pidFile: 'safety-data\\process.pid',
+  processId: 18000
+}
+2025-09-19T18:33:29: ⏰ Starting 240 second startup grace period...
+2025-09-19T18:33:29: 🚫 All message sending is BLOCKED during grace period
+2025-09-19T18:33:29: ℹ️ [6:33:29 pm] INFO: Grace Period: STARTED {
+  action: 'STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758286989240, processId: 18000 },
+  timestamp: 1758287009697
+}
+2025-09-19T18:33:29: ℹ️ [6:33:29 pm] INFO: Grace Period: GRACE_PERIOD_STARTED {
+  action: 'GRACE_PERIOD_STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758286989240, willExpireAt: 1758287229240 },
+  timestamp: 1758287009697
+}
+2025-09-19T18:33:29: 🛡️ Enhanced Safety Manager initialized
+2025-09-19T18:33:29: ⏰ Startup grace period: 240 seconds
+2025-09-19T18:33:29: 📋 Message rules loaded: 8 types
+2025-09-19T18:33:29: ℹ️ [6:33:29 pm] INFO: Enhanced Safety Manager initialization completed successfully {
+  initializationDuration: 20460,
+  gracePeriodActive: true,
+  messageRulesCount: 8,
+  messageTypes: [
+    'welcome',
+    'confirmation',
+    'ready',
+    'delivery',
+    'pickup_reminder',
+    'payment_reminder',
+    'fabric_welcome',
+    'fabric_purchase'
+  ],
+  circuitBreakerLimits: { daily: 10, hourly: 3, similarity: 0.8 },
+  databaseReady: true,
+  loggerReady: true,
+  processIsolationActive: true
+}
+2025-09-19T18:33:29: ✅ Safety Manager initialized
+2025-09-19T18:33:29: 📁 Loaded 0 sent messages from file
+2025-09-19T18:33:29: 📁 Loaded 0 customer histories from file
+2025-09-19T18:33:29: 📁 Loaded 0 message hashes from file
+2025-09-19T18:33:29: 📁 Loaded statistics from file
+2025-09-19T18:33:29: ✅ Duplicate Prevention Manager initialized
+2025-09-19T18:33:29: 📊 Loaded: 0 sent messages, 0 customer histories, 0 content hashes
+2025-09-19T18:33:29: ✅ Duplicate Prevention Manager initialized
+2025-09-19T18:33:29: 🔄 Starting WhatsApp connection...
+2025-09-19T18:33:29: 🔄 Initializing WhatsApp client...
+2025-09-19T18:33:29: ✅ WhatsApp connection started
+2025-09-19T18:33:29: 🛡️ Enhanced WhatsApp Client fully initialized
+2025-09-19T18:33:29: 📞 Attempting to request pairing code...
+2025-09-19T18:33:29: 💡 To use phone authentication:
+2025-09-19T18:33:29:    1. Use the dashboard at http://localhost:3001
+2025-09-19T18:33:29:    2. Select "Phone Number Authentication"
+2025-09-19T18:33:29:    3. Enter your phone number
+2025-09-19T18:33:29:    4. Get the pairing code and enter it in WhatsApp
+2025-09-19T18:33:29: 🔄 Connecting to WhatsApp...
+2025-09-19T18:33:33: 🔌 Connection closed. Reason: undefined
+2025-09-19T18:33:33: 🔄 Reconnecting in 8s... (Attempt 4/10)
+2025-09-19T18:33:39: 💾 Data synced to files successfully
+2025-09-19T18:33:41: 🔄 Initializing Enhanced WhatsApp Client...
+2025-09-19T18:33:41: ℹ️ [6:33:41 pm] INFO: Enhanced Safety Manager initialization started {
+  startupTime: 1758286989240,
+  gracePeriodMs: 240000,
+  dataDir: './safety-data',
+  dbPath: 'safety-data\\safety-database.db',
+  processId: 18000,
+  nodeVersion: 'v22.19.0'
+}
+2025-09-19T18:33:41: ℹ️ [6:33:41 pm] INFO: Data directory created/verified { dataDir: './safety-data' }
+2025-09-19T18:33:41: ℹ️ [6:33:41 pm] INFO: SQLite database initialized { dbPath: 'safety-data\\safety-database.db' }
+2025-09-19T18:33:41: 🧹 Removed stale process lock
+2025-09-19T18:33:41: 🔒 Process lock acquired (PID: 18000)
+2025-09-19T18:33:41: ℹ️ [6:33:41 pm] INFO: Process isolation enforced {
+  lockFile: 'safety-data\\process.lock',
+  pidFile: 'safety-data\\process.pid',
+  processId: 18000
+}
+2025-09-19T18:33:41: ⏰ Starting 240 second startup grace period...
+2025-09-19T18:33:41: 🚫 All message sending is BLOCKED during grace period
+2025-09-19T18:33:41: ℹ️ [6:33:41 pm] INFO: Grace Period: STARTED {
+  action: 'STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758286989240, processId: 18000 },
+  timestamp: 1758287021164
+}
+2025-09-19T18:33:41: ℹ️ [6:33:41 pm] INFO: Grace Period: GRACE_PERIOD_STARTED {
+  action: 'GRACE_PERIOD_STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758286989240, willExpireAt: 1758287229240 },
+  timestamp: 1758287021165
+}
+2025-09-19T18:33:41: 🛡️ Enhanced Safety Manager initialized
+2025-09-19T18:33:41: ⏰ Startup grace period: 240 seconds
+2025-09-19T18:33:41: 📋 Message rules loaded: 8 types
+2025-09-19T18:33:41: ℹ️ [6:33:41 pm] INFO: Enhanced Safety Manager initialization completed successfully {
+  initializationDuration: 31928,
+  gracePeriodActive: true,
+  messageRulesCount: 8,
+  messageTypes: [
+    'welcome',
+    'confirmation',
+    'ready',
+    'delivery',
+    'pickup_reminder',
+    'payment_reminder',
+    'fabric_welcome',
+    'fabric_purchase'
+  ],
+  circuitBreakerLimits: { daily: 10, hourly: 3, similarity: 0.8 },
+  databaseReady: true,
+  loggerReady: true,
+  processIsolationActive: true
+}
+2025-09-19T18:33:41: ✅ Safety Manager initialized
+2025-09-19T18:33:41: 📁 Loaded 0 sent messages from file
+2025-09-19T18:33:41: 📁 Loaded 0 customer histories from file
+2025-09-19T18:33:41: 📁 Loaded 0 message hashes from file
+2025-09-19T18:33:41: 📁 Loaded statistics from file
+2025-09-19T18:33:41: ✅ Duplicate Prevention Manager initialized
+2025-09-19T18:33:41: 📊 Loaded: 0 sent messages, 0 customer histories, 0 content hashes
+2025-09-19T18:33:41: ✅ Duplicate Prevention Manager initialized
+2025-09-19T18:33:41: 🔄 Starting WhatsApp connection...
+2025-09-19T18:33:41: 🔄 Initializing WhatsApp client...
+2025-09-19T18:33:41: ✅ WhatsApp connection started
+2025-09-19T18:33:41: 🛡️ Enhanced WhatsApp Client fully initialized
+2025-09-19T18:33:41: 📞 Attempting to request pairing code...
+2025-09-19T18:33:41: 💡 To use phone authentication:
+2025-09-19T18:33:41:    1. Use the dashboard at http://localhost:3001
+2025-09-19T18:33:41:    2. Select "Phone Number Authentication"
+2025-09-19T18:33:41:    3. Enter your phone number
+2025-09-19T18:33:41:    4. Get the pairing code and enter it in WhatsApp
+2025-09-19T18:33:41: 🔄 Connecting to WhatsApp...
+2025-09-19T18:33:46: 🔌 Connection closed. Reason: undefined
+2025-09-19T18:33:46: 🔄 Reconnecting in 16s... (Attempt 5/10)
+2025-09-19T18:34:02: 🔄 Initializing Enhanced WhatsApp Client...
+2025-09-19T18:34:02: ℹ️ [6:34:02 pm] INFO: Enhanced Safety Manager initialization started {
+  startupTime: 1758286989240,
+  gracePeriodMs: 240000,
+  dataDir: './safety-data',
+  dbPath: 'safety-data\\safety-database.db',
+  processId: 18000,
+  nodeVersion: 'v22.19.0'
+}
+2025-09-19T18:34:02: ℹ️ [6:34:02 pm] INFO: Data directory created/verified { dataDir: './safety-data' }
+2025-09-19T18:34:02: ℹ️ [6:34:02 pm] INFO: SQLite database initialized { dbPath: 'safety-data\\safety-database.db' }
+2025-09-19T18:34:02: 🧹 Removed stale process lock
+2025-09-19T18:34:02: 🔒 Process lock acquired (PID: 18000)
+2025-09-19T18:34:02: ℹ️ [6:34:02 pm] INFO: Process isolation enforced {
+  lockFile: 'safety-data\\process.lock',
+  pidFile: 'safety-data\\process.pid',
+  processId: 18000
+}
+2025-09-19T18:34:02: ⏰ Starting 240 second startup grace period...
+2025-09-19T18:34:02: 🚫 All message sending is BLOCKED during grace period
+2025-09-19T18:34:02: ℹ️ [6:34:02 pm] INFO: Grace Period: STARTED {
+  action: 'STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758286989240, processId: 18000 },
+  timestamp: 1758287042742
+}
+2025-09-19T18:34:02: ℹ️ [6:34:02 pm] INFO: Grace Period: GRACE_PERIOD_STARTED {
+  action: 'GRACE_PERIOD_STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758286989240, willExpireAt: 1758287229240 },
+  timestamp: 1758287042742
+}
+2025-09-19T18:34:02: 🛡️ Enhanced Safety Manager initialized
+2025-09-19T18:34:02: ⏰ Startup grace period: 240 seconds
+2025-09-19T18:34:02: 📋 Message rules loaded: 8 types
+2025-09-19T18:34:02: ℹ️ [6:34:02 pm] INFO: Enhanced Safety Manager initialization completed successfully {
+  initializationDuration: 53505,
+  gracePeriodActive: true,
+  messageRulesCount: 8,
+  messageTypes: [
+    'welcome',
+    'confirmation',
+    'ready',
+    'delivery',
+    'pickup_reminder',
+    'payment_reminder',
+    'fabric_welcome',
+    'fabric_purchase'
+  ],
+  circuitBreakerLimits: { daily: 10, hourly: 3, similarity: 0.8 },
+  databaseReady: true,
+  loggerReady: true,
+  processIsolationActive: true
+}
+2025-09-19T18:34:02: ✅ Safety Manager initialized
+2025-09-19T18:34:02: 📁 Loaded 0 sent messages from file
+2025-09-19T18:34:02: 📁 Loaded 0 customer histories from file
+2025-09-19T18:34:02: 📁 Loaded 0 message hashes from file
+2025-09-19T18:34:02: 📁 Loaded statistics from file
+2025-09-19T18:34:02: ✅ Duplicate Prevention Manager initialized
+2025-09-19T18:34:02: 📊 Loaded: 0 sent messages, 0 customer histories, 0 content hashes
+2025-09-19T18:34:02: ✅ Duplicate Prevention Manager initialized
+2025-09-19T18:34:02: 🔄 Starting WhatsApp connection...
+2025-09-19T18:34:02: 🔄 Initializing WhatsApp client...
+2025-09-19T18:34:02: ✅ WhatsApp connection started
+2025-09-19T18:34:02: 🛡️ Enhanced WhatsApp Client fully initialized
+2025-09-19T18:34:02: 📞 Attempting to request pairing code...
+2025-09-19T18:34:02: 💡 To use phone authentication:
+2025-09-19T18:34:02:    1. Use the dashboard at http://localhost:3001
+2025-09-19T18:34:02:    2. Select "Phone Number Authentication"
+2025-09-19T18:34:02:    3. Enter your phone number
+2025-09-19T18:34:02:    4. Get the pairing code and enter it in WhatsApp
+2025-09-19T18:34:02: 🔄 Connecting to WhatsApp...
+2025-09-19T18:34:06: 🔌 Connection closed. Reason: undefined
+2025-09-19T18:34:06: 🔄 Reconnecting in 30s... (Attempt 6/10)
+2025-09-19T18:34:09: 💾 Data synced to files successfully
+2025-09-19T18:34:36: 🔄 Initializing Enhanced WhatsApp Client...
+2025-09-19T18:34:36: ℹ️ [6:34:36 pm] INFO: Enhanced Safety Manager initialization started {
+  startupTime: 1758286989240,
+  gracePeriodMs: 240000,
+  dataDir: './safety-data',
+  dbPath: 'safety-data\\safety-database.db',
+  processId: 18000,
+  nodeVersion: 'v22.19.0'
+}
+2025-09-19T18:34:36: ℹ️ [6:34:36 pm] INFO: Data directory created/verified { dataDir: './safety-data' }
+2025-09-19T18:34:36: ℹ️ [6:34:36 pm] INFO: SQLite database initialized { dbPath: 'safety-data\\safety-database.db' }
+2025-09-19T18:34:36: 🧹 Removed stale process lock
+2025-09-19T18:34:36: 🔒 Process lock acquired (PID: 18000)
+2025-09-19T18:34:36: ℹ️ [6:34:36 pm] INFO: Process isolation enforced {
+  lockFile: 'safety-data\\process.lock',
+  pidFile: 'safety-data\\process.pid',
+  processId: 18000
+}
+2025-09-19T18:34:36: ⏰ Starting 240 second startup grace period...
+2025-09-19T18:34:36: 🚫 All message sending is BLOCKED during grace period
+2025-09-19T18:34:36: ℹ️ [6:34:36 pm] INFO: Grace Period: STARTED {
+  action: 'STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758286989240, processId: 18000 },
+  timestamp: 1758287076453
+}
+2025-09-19T18:34:36: ℹ️ [6:34:36 pm] INFO: Grace Period: GRACE_PERIOD_STARTED {
+  action: 'GRACE_PERIOD_STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758286989240, willExpireAt: 1758287229240 },
+  timestamp: 1758287076453
+}
+2025-09-19T18:34:36: 🛡️ Enhanced Safety Manager initialized
+2025-09-19T18:34:36: ⏰ Startup grace period: 240 seconds
+2025-09-19T18:34:36: 📋 Message rules loaded: 8 types
+2025-09-19T18:34:36: ℹ️ [6:34:36 pm] INFO: Enhanced Safety Manager initialization completed successfully {
+  initializationDuration: 87216,
+  gracePeriodActive: true,
+  messageRulesCount: 8,
+  messageTypes: [
+    'welcome',
+    'confirmation',
+    'ready',
+    'delivery',
+    'pickup_reminder',
+    'payment_reminder',
+    'fabric_welcome',
+    'fabric_purchase'
+  ],
+  circuitBreakerLimits: { daily: 10, hourly: 3, similarity: 0.8 },
+  databaseReady: true,
+  loggerReady: true,
+  processIsolationActive: true
+}
+2025-09-19T18:34:36: ✅ Safety Manager initialized
+2025-09-19T18:34:36: 📁 Loaded 0 sent messages from file
+2025-09-19T18:34:36: 📁 Loaded 0 customer histories from file
+2025-09-19T18:34:36: 📁 Loaded 0 message hashes from file
+2025-09-19T18:34:36: 📁 Loaded statistics from file
+2025-09-19T18:34:36: ✅ Duplicate Prevention Manager initialized
+2025-09-19T18:34:36: 📊 Loaded: 0 sent messages, 0 customer histories, 0 content hashes
+2025-09-19T18:34:36: ✅ Duplicate Prevention Manager initialized
+2025-09-19T18:34:36: 🔄 Starting WhatsApp connection...
+2025-09-19T18:34:36: 🔄 Initializing WhatsApp client...
+2025-09-19T18:34:36: ✅ WhatsApp connection started
+2025-09-19T18:34:36: 🛡️ Enhanced WhatsApp Client fully initialized
+2025-09-19T18:34:36: 📞 Attempting to request pairing code...
+2025-09-19T18:34:36: 💡 To use phone authentication:
+2025-09-19T18:34:36:    1. Use the dashboard at http://localhost:3001
+2025-09-19T18:34:36:    2. Select "Phone Number Authentication"
+2025-09-19T18:34:36:    3. Enter your phone number
+2025-09-19T18:34:36:    4. Get the pairing code and enter it in WhatsApp
+2025-09-19T18:34:36: 🔄 Connecting to WhatsApp...
+2025-09-19T18:34:39: 💾 Data synced to files successfully
+2025-09-19T18:34:39: 🔌 Connection closed. Reason: undefined
+2025-09-19T18:34:39: 🔄 Reconnecting in 30s... (Attempt 7/10)
+2025-09-19T18:35:09: 💾 Data synced to files successfully
+2025-09-19T18:35:09: 🔄 Initializing Enhanced WhatsApp Client...
+2025-09-19T18:35:09: ℹ️ [6:35:09 pm] INFO: Enhanced Safety Manager initialization started {
+  startupTime: 1758286989240,
+  gracePeriodMs: 240000,
+  dataDir: './safety-data',
+  dbPath: 'safety-data\\safety-database.db',
+  processId: 18000,
+  nodeVersion: 'v22.19.0'
+}
+2025-09-19T18:35:09: ℹ️ [6:35:09 pm] INFO: Data directory created/verified { dataDir: './safety-data' }
+2025-09-19T18:35:09: ℹ️ [6:35:09 pm] INFO: SQLite database initialized { dbPath: 'safety-data\\safety-database.db' }
+2025-09-19T18:35:09: 🧹 Removed stale process lock
+2025-09-19T18:35:09: 🔒 Process lock acquired (PID: 18000)
+2025-09-19T18:35:09: ℹ️ [6:35:09 pm] INFO: Process isolation enforced {
+  lockFile: 'safety-data\\process.lock',
+  pidFile: 'safety-data\\process.pid',
+  processId: 18000
+}
+2025-09-19T18:35:09: ⏰ Starting 240 second startup grace period...
+2025-09-19T18:35:09: 🚫 All message sending is BLOCKED during grace period
+2025-09-19T18:35:09: ℹ️ [6:35:09 pm] INFO: Grace Period: STARTED {
+  action: 'STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758286989240, processId: 18000 },
+  timestamp: 1758287109725
+}
+2025-09-19T18:35:09: ℹ️ [6:35:09 pm] INFO: Grace Period: GRACE_PERIOD_STARTED {
+  action: 'GRACE_PERIOD_STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758286989240, willExpireAt: 1758287229240 },
+  timestamp: 1758287109726
+}
+2025-09-19T18:35:09: 🛡️ Enhanced Safety Manager initialized
+2025-09-19T18:35:09: ⏰ Startup grace period: 240 seconds
+2025-09-19T18:35:09: 📋 Message rules loaded: 8 types
+2025-09-19T18:35:09: ℹ️ [6:35:09 pm] INFO: Enhanced Safety Manager initialization completed successfully {
+  initializationDuration: 120493,
+  gracePeriodActive: true,
+  messageRulesCount: 8,
+  messageTypes: [
+    'welcome',
+    'confirmation',
+    'ready',
+    'delivery',
+    'pickup_reminder',
+    'payment_reminder',
+    'fabric_welcome',
+    'fabric_purchase'
+  ],
+  circuitBreakerLimits: { daily: 10, hourly: 3, similarity: 0.8 },
+  databaseReady: true,
+  loggerReady: true,
+  processIsolationActive: true
+}
+2025-09-19T18:35:09: ✅ Safety Manager initialized
+2025-09-19T18:35:09: 📁 Loaded 0 sent messages from file
+2025-09-19T18:35:09: 📁 Loaded 0 customer histories from file
+2025-09-19T18:35:09: 📁 Loaded 0 message hashes from file
+2025-09-19T18:35:09: 📁 Loaded statistics from file
+2025-09-19T18:35:09: ✅ Duplicate Prevention Manager initialized
+2025-09-19T18:35:09: 📊 Loaded: 0 sent messages, 0 customer histories, 0 content hashes
+2025-09-19T18:35:09: ✅ Duplicate Prevention Manager initialized
+2025-09-19T18:35:09: 🔄 Starting WhatsApp connection...
+2025-09-19T18:35:09: 🔄 Initializing WhatsApp client...
+2025-09-19T18:35:09: ✅ WhatsApp connection started
+2025-09-19T18:35:09: 🛡️ Enhanced WhatsApp Client fully initialized
+2025-09-19T18:35:09: 📞 Attempting to request pairing code...
+2025-09-19T18:35:09: 💡 To use phone authentication:
+2025-09-19T18:35:09:    1. Use the dashboard at http://localhost:3001
+2025-09-19T18:35:09:    2. Select "Phone Number Authentication"
+2025-09-19T18:35:09:    3. Enter your phone number
+2025-09-19T18:35:09:    4. Get the pairing code and enter it in WhatsApp
+2025-09-19T18:35:09: 🔄 Connecting to WhatsApp...
+2025-09-19T18:35:11: 🔌 Connection closed. Reason: undefined
+2025-09-19T18:35:11: 🔄 Reconnecting in 30s... (Attempt 8/10)
+2025-09-19T18:35:39: 💾 Data synced to files successfully
+2025-09-19T18:35:41: 🔄 Initializing Enhanced WhatsApp Client...
+2025-09-19T18:35:41: ℹ️ [6:35:41 pm] INFO: Enhanced Safety Manager initialization started {
+  startupTime: 1758286989240,
+  gracePeriodMs: 240000,
+  dataDir: './safety-data',
+  dbPath: 'safety-data\\safety-database.db',
+  processId: 18000,
+  nodeVersion: 'v22.19.0'
+}
+2025-09-19T18:35:41: ℹ️ [6:35:41 pm] INFO: Data directory created/verified { dataDir: './safety-data' }
+2025-09-19T18:35:41: ℹ️ [6:35:41 pm] INFO: SQLite database initialized { dbPath: 'safety-data\\safety-database.db' }
+2025-09-19T18:35:41: 🧹 Removed stale process lock
+2025-09-19T18:35:41: 🔒 Process lock acquired (PID: 18000)
+2025-09-19T18:35:41: ℹ️ [6:35:41 pm] INFO: Process isolation enforced {
+  lockFile: 'safety-data\\process.lock',
+  pidFile: 'safety-data\\process.pid',
+  processId: 18000
+}
+2025-09-19T18:35:41: ⏰ Starting 240 second startup grace period...
+2025-09-19T18:35:41: 🚫 All message sending is BLOCKED during grace period
+2025-09-19T18:35:41: ℹ️ [6:35:41 pm] INFO: Grace Period: STARTED {
+  action: 'STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758286989240, processId: 18000 },
+  timestamp: 1758287141784
+}
+2025-09-19T18:35:41: ℹ️ [6:35:41 pm] INFO: Grace Period: GRACE_PERIOD_STARTED {
+  action: 'GRACE_PERIOD_STARTED',
+  remainingMs: 240000,
+  remainingSeconds: 240,
+  details: { startupTime: 1758286989240, willExpireAt: 1758287229240 },
+  timestamp: 1758287141784
+}
+2025-09-19T18:35:41: 🛡️ Enhanced Safety Manager initialized
+2025-09-19T18:35:41: ⏰ Startup grace period: 240 seconds
+2025-09-19T18:35:41: 📋 Message rules loaded: 8 types
+2025-09-19T18:35:41: ℹ️ [6:35:41 pm] INFO: Enhanced Safety Manager initialization completed successfully {
+  initializationDuration: 152547,
+  gracePeriodActive: true,
+  messageRulesCount: 8,
+  messageTypes: [
+    'welcome',
+    'confirmation',
+    'ready',
+    'delivery',
+    'pickup_reminder',
+    'payment_reminder',
+    'fabric_welcome',
+    'fabric_purchase'
+  ],
+  circuitBreakerLimits: { daily: 10, hourly: 3, similarity: 0.8 },
+  databaseReady: true,
+  loggerReady: true,
+  processIsolationActive: true
+}
+2025-09-19T18:35:41: ✅ Safety Manager initialized
+2025-09-19T18:35:41: 📁 Loaded 0 sent messages from file
+2025-09-19T18:35:41: 📁 Loaded 0 customer histories from file
+2025-09-19T18:35:41: 📁 Loaded 0 message hashes from file
+2025-09-19T18:35:41: 📁 Loaded statistics from file
+2025-09-19T18:35:41: ✅ Duplicate Prevention Manager initialized
+2025-09-19T18:35:41: 📊 Loaded: 0 sent messages, 0 customer histories, 0 content hashes
+2025-09-19T18:35:41: ✅ Duplicate Prevention Manager initialized
+2025-09-19T18:35:41: 🔄 Starting WhatsApp connection...
+2025-09-19T18:35:41: 🔄 Initializing WhatsApp client...
+2025-09-19T18:35:41: ✅ WhatsApp connection started
+2025-09-19T18:35:41: 🛡️ Enhanced WhatsApp Client fully initialized
+2025-09-19T18:35:41: 📞 Attempting to request pairing code...
+2025-09-19T18:35:41: 💡 To use phone authentication:
+2025-09-19T18:35:41:    1. Use the dashboard at http://localhost:3001
+2025-09-19T18:35:41:    2. Select "Phone Number Authentication"
+2025-09-19T18:35:41:    3. Enter your phone number
+2025-09-19T18:35:41:    4. Get the pairing code and enter it in WhatsApp
+2025-09-19T18:35:41: 🔄 Connecting to WhatsApp...
+2025-09-19T18:35:46: 🔌 Connection closed. Reason: undefined
+2025-09-19T18:35:46: 🔄 Reconnecting in 30s... (Attempt 9/10)
