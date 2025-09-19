@@ -1112,7 +1112,8 @@ class WhatsAppTailorBot {
                     phone: cleanPhone || '',
                     garment_type: rowData[5] || 'N/A', // Fixed: Use Garment Types (index 5) instead of Customer Type (index 4)
                     status: rowData[8] || 'N/A',
-                    delivery_date: rowData[6] || 'N/A',
+                    order_date: rowData[6] || 'N/A', // Order Date (column G) - used for "Order Date" in confirmation message
+                    delivery_date: rowData[7] || 'N/A', // Delivery Date (column H)
                     total_amount: rowData[9] || 'N/A',
                     advance_amount: rowData[10] || 'N/A',
                     remaining_amount: rowData[11] || 'N/A'

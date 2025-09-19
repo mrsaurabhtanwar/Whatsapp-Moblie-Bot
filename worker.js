@@ -174,24 +174,7 @@ class WhatsAppSheetBot {
 
     async setupQueue() {
         try {
-            let redis;
-            
-            if (process.env.REDIS_URL) {
-                redis = new Redis(process.env.REDIS_URL);
-                logger.info('Connected to Redis queue');
-            } else {
-                redis = new Redis({
-                    host: 'localhost',
-                    port: 6379,
-                    maxRetriesPerRequest: 3,
-                    retryDelayOnFailover: 100,
-                    enableReadyCheck: false,
-                    maxLoadingTimeout: 5000,
-                    lazyConnect: true
-                });
-                logger.info('Using local Redis queue');
-            }
-
+            // Use PQueue for simple in-memory job processing
             this.jobQueue = new PQueue({ 
                 concurrency: 1, 
                 interval: 2000, 
@@ -201,126 +184,20 @@ class WhatsAppSheetBot {
             // Initialize admin commands after queue is ready
             this.adminCommands = new AdminCommands(this.whatsapp, this.sheets, this.jobQueue);
             
-            // Setup queue processors
-            this.setupQueueProcessors();
+            logger.info('Using PQueue for job processing');
             
         } catch (error) {
-            logger.warn('Redis not available, using in-memory queue');
-            this.setupInMemoryQueue();
+            logger.warn('PQueue setup failed, creating simple queue interface');
+            // Create minimal queue interface for compatibility
+            this.jobQueue = {
+                getStats: async () => ({ active: 0, waiting: 0, completed: 0, failed: 0 }),
+                close: async () => { logger.info('Queue closed'); }
+            };
+            this.adminCommands = new AdminCommands(this.whatsapp, this.sheets, this.jobQueue);
         }
     }
 
-    setupInMemoryQueue() {
-        // Simple in-memory queue implementation
-        this.jobQueue = {
-            jobs: [],
-            add: async (jobName, data, options = {}) => {
-                const job = {
-                    id: Date.now() + Math.random(),
-                    name: jobName,
-                    data: data,
-                    opts: options,
-                    timestamp: new Date().toISOString()
-                };
-                this.jobQueue.jobs.push(job);
-                logger.info(`Added job to in-memory queue: ${jobName}`, { jobId: job.id, data });
-                
-                // Process immediately for in-memory queue
-                setImmediate(() => this.processInMemoryJob(job));
-                return { id: job.id };
-            },
-            getStats: async () => ({
-                active: 0,
-                waiting: this.jobQueue.jobs.length,
-                completed: 0,
-                failed: 0
-            }),
-            getWaiting: async () => this.jobQueue.jobs,
-            process: (jobName, processor) => {
-                // Store processor for in-memory jobs
-                this.jobProcessors = this.jobProcessors || {};
-                this.jobProcessors[jobName] = processor;
-            },
-            close: async () => {
-                // No-op for in-memory queue
-                logger.info('In-memory queue closed');
-            }
-        };
-        
-        this.adminCommands = new AdminCommands(this.whatsapp, this.sheets, this.jobQueue);
-        logger.info('Using in-memory queue');
-    }
 
-    async processInMemoryJob(job) {
-        try {
-            logger.info(`Processing in-memory job: ${job.name}`, { jobId: job.id, jobData: job.data });
-            
-            const processor = this.jobProcessors && this.jobProcessors[job.name];
-            if (processor) {
-                logger.info(`Found processor for job: ${job.name}`);
-                await processor(job.data); // Pass job.data instead of job
-                logger.info(`Successfully processed job: ${job.name}`);
-                // Remove completed job
-                this.jobQueue.jobs = this.jobQueue.jobs.filter(j => j.id !== job.id);
-            } else {
-                logger.warn(`No processor found for job: ${job.name}. Available processors:`, Object.keys(this.jobProcessors || {}));
-            }
-        } catch (error) {
-            logger.error(`Error processing in-memory job ${job.name}:`, error.message);
-        }
-    }
-
-    setupQueueProcessors() {
-        // Process order notifications with timeout
-        this.jobQueue.process('process-order', async (job) => {
-            const timeout = setTimeout(() => {
-                logger.error(`Job timeout: ${job.id}`);
-                job.moveToFailed(new Error('Job timeout after 30 seconds'), true);
-            }, 30000); // 30 second timeout
-            
-            try {
-                const result = await this.processOrderNotification(job.data);
-                clearTimeout(timeout);
-                return result;
-            } catch (error) {
-                clearTimeout(timeout);
-                logger.error(`Job failed: ${job.id}`, error.message);
-                throw error;
-            }
-        });
-
-        // Process batch orders with timeout
-        this.jobQueue.process('process-batch', async (job) => {
-            const timeout = setTimeout(() => {
-                logger.error(`Batch job timeout: ${job.id}`);
-                job.moveToFailed(new Error('Batch job timeout after 60 seconds'), true);
-            }, 60000); // 60 second timeout
-            
-            try {
-                const result = await this.processBatchOrders(job.data);
-                clearTimeout(timeout);
-                return result;
-            } catch (error) {
-                clearTimeout(timeout);
-                logger.error(`Batch job failed: ${job.id}`, error.message);
-                throw error;
-            }
-        });
-
-        // Handle queue events
-        this.jobQueue.on('completed', (job) => {
-            logger.info(`Job ${job.id} completed: ${job.name}`);
-        });
-
-        this.jobQueue.on('failed', (job, err) => {
-            logger.error(`Job ${job.id} failed: ${err.message}`);
-        });
-
-        this.jobQueue.on('stalled', (job) => {
-            logger.error(`Job ${job.id} stalled, removing...`);
-            job.remove();
-        });
-    }
 
     setupExpress() {
         this.app.use(express.json());
@@ -330,7 +207,7 @@ class WhatsAppSheetBot {
         // Health check endpoint (root)
         const healthHandler = async (req, res) => {
             try {
-                const whatsappHealth = this.whatsapp.isHealthy();
+                const whatsappHealth = await this.whatsapp.isHealthy();
                 const sheetsHealth = await this.sheets.healthCheck();
                 
                 let queueStats = { active: 0, waiting: 0, completed: 0, failed: 0 };
@@ -375,8 +252,215 @@ class WhatsAppSheetBot {
             }
         };
 
-        this.app.get('/', healthHandler);
-        // Health check alias for convenience
+        // QR code endpoint (default route)
+        this.app.get('/', async (req, res) => {
+            try {
+                const qrCode = this.whatsapp.getQRCode();
+                const qrDataURL = await this.whatsapp.getQRCodeDataURL();
+                const connectionStatus = this.whatsapp.getConnectionStatus();
+                
+                logger.info('Dashboard accessed', { 
+                    hasQRCode: !!qrCode, 
+                    hasQRDataURL: !!qrDataURL,
+                    qrCodeType: typeof qrCode,
+                    qrCodeLength: qrCode ? qrCode.length : 0,
+                    connectionStatus 
+                });
+                
+                if (qrDataURL) {
+                    // Ensure QR data URL is properly formatted without line breaks
+                    const cleanQRDataURL = qrDataURL.replace(/\s+/g, '');
+                    
+                    // Create complete HTML response with phone authentication
+                    const htmlResponse = `<!DOCTYPE html>
+<html>
+<head>
+    <title>WhatsApp Bot Dashboard</title>
+    <style>
+        body { text-align: center; padding: 20px; font-family: Arial, sans-serif; background-color: #f0f0f0; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .auth-section { display: inline-block; vertical-align: top; margin: 10px; }
+        .qr-container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 400px; }
+        .phone-container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 400px; }
+        img { max-width: 300px; border: 2px solid #ddd; border-radius: 8px; }
+        .status { margin-top: 20px; padding: 10px; background: #e8f5e8; border-radius: 5px; }
+        .debug { margin-top: 20px; font-size: 12px; color: #666; background: #f9f9f9; padding: 10px; border-radius: 5px; }
+        .instructions { margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 5px; text-align: left; }
+        .phone-form { margin: 15px 0; }
+        .phone-form input { padding: 10px; margin: 5px; border: 1px solid #ddd; border-radius: 5px; width: 200px; }
+        .phone-form button { padding: 10px 20px; background: #25D366; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        .phone-form button:hover { background: #128C7E; }
+        .pair-section { margin-top: 15px; padding: 15px; background: #f0f8ff; border-radius: 5px; }
+        .hidden { display: none; }
+        .success { color: #25D366; font-weight: bold; }
+        .error { color: #ff4444; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>📱 WhatsApp Bot Dashboard</h2>
+        
+        <div class="auth-section">
+            <div class="qr-container">
+                <h3>📷 QR Code Authentication</h3>
+                <img src="${cleanQRDataURL}" alt="WhatsApp QR Code">
+                <div class="instructions">
+                    <h4>How to scan QR Code:</h4>
+                    <ol>
+                        <li>Open WhatsApp on your phone</li>
+                        <li>Go to Settings → Linked Devices</li>
+                        <li>Tap "Link a Device"</li>
+                        <li>Scan this QR code</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+        
+        <div class="auth-section">
+            <div class="phone-container">
+                <h3>📞 Phone Number Authentication</h3>
+                <div class="phone-form">
+                    <input type="tel" id="phoneInput" placeholder="+91XXXXXXXXXX" maxlength="15">
+                    <br>
+                    <button onclick="startPhoneAuth()">Generate Pairing Code</button>
+                </div>
+                
+                <div id="pair-section" class="pair-section hidden">
+                    <h4>Enter Pairing Code:</h4>
+                    <input type="text" id="pairCodeInput" placeholder="123456" maxlength="6">
+                    <br>
+                    <button onclick="verifyPairCode()">Verify Code</button>
+                    <div id="pairStatus"></div>
+                </div>
+                
+                <div class="instructions">
+                    <h4>How to use Phone Authentication:</h4>
+                    <ol>
+                        <li>Enter your phone number with country code</li>
+                        <li>Click "Generate Pairing Code"</li>
+                        <li>Open WhatsApp on your phone</li>
+                        <li>Go to Settings → Linked Devices</li>
+                        <li>Tap "Link a Device"</li>
+                        <li>Select "Link with Phone Number Instead"</li>
+                        <li>Enter the 6-digit pairing code</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status">
+            <p><strong>Status:</strong> ${connectionStatus.connected ? '✅ Connected' : '⏳ Waiting for authentication'}</p>
+            <p><strong>Connection Attempts:</strong> ${connectionStatus.connectionAttempts}/${connectionStatus.maxAttempts}</p>
+            <p><strong>State:</strong> ${connectionStatus.state}</p>
+        </div>
+        
+        <div class="debug">
+            <h4>Debug Info:</h4>
+            <p>Has QR Code: ${!!qrCode}</p>
+            <p>QR Code Length: ${qrCode ? qrCode.length : 0}</p>
+            <p>Connection Status: ${JSON.stringify(connectionStatus)}</p>
+        </div>
+    </div>
+    
+    <script>
+        let isWaitingForPairing = false;
+        
+        async function startPhoneAuth() {
+            const phoneNumber = document.getElementById('phoneInput').value.trim();
+            if (!phoneNumber) {
+                alert('Please enter phone number');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/auth/phone', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phoneNumber })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    isWaitingForPairing = true;
+                    document.getElementById('pair-section').classList.remove('hidden');
+                    if (result.code) {
+                        document.getElementById('pairStatus').innerHTML = '<div class="success">Pairing code: ' + result.code + '</div>';
+                    }
+                } else {
+                    document.getElementById('pairStatus').innerHTML = '<div class="error">Error: ' + result.message + '</div>';
+                }
+            } catch (error) {
+                document.getElementById('pairStatus').innerHTML = '<div class="error">Error: ' + error.message + '</div>';
+            }
+        }
+        
+        async function verifyPairCode() {
+            const code = document.getElementById('pairCodeInput').value.trim();
+            if (!code) {
+                alert('Please enter pairing code');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/auth/pair-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    document.getElementById('pairStatus').innerHTML = '<div class="success">✅ Pairing successful! Please check WhatsApp.</div>';
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    document.getElementById('pairStatus').innerHTML = '<div class="error">Error: ' + result.message + '</div>';
+                }
+            } catch (error) {
+                document.getElementById('pairStatus').innerHTML = '<div class="error">Error: ' + error.message + '</div>';
+            }
+        }
+        
+        // Auto-refresh every 10 seconds
+        setInterval(() => {
+            if (!isWaitingForPairing) {
+                location.reload();
+            }
+        }, 10000);
+    </script>
+</body>
+</html>`;
+                    
+                    res.send(htmlResponse);
+                } else {
+                    res.status(404).send(`
+                        <html>
+                            <head><title>QR Code Not Available</title></head>
+                            <body style="text-align: center; padding: 50px;">
+                                <h2>❌ QR Code Not Available</h2>
+                                <p>WhatsApp client is not generating QR codes yet.</p>
+                                <p><strong>Debug Info:</strong></p>
+                                <p>Has QR Code: ${!!qrCode}</p>
+                                <p>Connection Status: ${JSON.stringify(connectionStatus)}</p>
+                                <p>Please wait a moment and refresh this page.</p>
+                            </body>
+                        </html>
+                    `);
+                }
+            } catch (error) {
+                logger.error('Dashboard error:', error);
+                res.status(500).send(`
+                    <html>
+                        <head><title>Dashboard Error</title></head>
+                        <body style="text-align: center; padding: 50px;">
+                            <h2>❌ Dashboard Error</h2>
+                            <p>Error: ${error.message}</p>
+                        </body>
+                    </html>
+                `);
+            }
+        });
+        
+        // Health check endpoint (JSON)
         this.app.get('/health', healthHandler);
 
         // QR code endpoint
@@ -1016,7 +1100,7 @@ class WhatsAppSheetBot {
 
                 // Run basic tests
                 await runTest('WhatsApp Connection', async () => {
-                    const isConnected = this.whatsapp.isHealthy().connected;
+                    const isConnected = (await this.whatsapp.isHealthy()).connected;
                     if (!isConnected) throw new Error('WhatsApp not connected');
                     return { connected: isConnected };
                 });
@@ -1224,7 +1308,7 @@ class WhatsAppSheetBot {
             logger.info('Express server started');
 
             // Start polling if already connected
-            if (this.whatsapp.isHealthy().connected && String(process.env.DISABLE_POLLING || 'false').toLowerCase() !== 'true') {
+            if ((await this.whatsapp.isHealthy()).connected && String(process.env.DISABLE_POLLING || 'false').toLowerCase() !== 'true') {
                 this.startPolling();
             } else if (String(process.env.DISABLE_POLLING || 'false').toLowerCase() === 'true') {
                 logger.warn('Polling disabled via DISABLE_POLLING environment variable');
@@ -1247,28 +1331,17 @@ class WhatsAppSheetBot {
         // Immediate poll
         this.pollForReadyOrders();
         
-        // Schedule regular polling; use cron only for < 60s, else setInterval
-        const intervalSec = Math.max(1, Math.floor(this.pollInterval / 1000));
-        if (intervalSec <= 59) {
-            this.pollingJob = schedule.scheduleJob(`*/${intervalSec} * * * * *`, () => {
-                this.pollForReadyOrders();
-            });
-        } else {
-            this.pollingJob = setInterval(() => {
-                this.pollForReadyOrders();
-            }, intervalSec * 1000);
-        }
+        // Schedule regular polling using setInterval
+        this.pollingJob = setInterval(() => {
+            this.pollForReadyOrders();
+        }, this.pollInterval);
 
         logger.info(`Started polling every ${this.pollInterval / 1000} seconds`);
     }
 
     stopPolling() {
         if (this.pollingJob) {
-            if (typeof this.pollingJob.cancel === 'function') {
-                this.pollingJob.cancel();
-            } else {
-                clearInterval(this.pollingJob);
-            }
+            clearInterval(this.pollingJob);
             this.pollingJob = null;
         }
         this.isPolling = false;
@@ -2449,7 +2522,7 @@ class WhatsAppSheetBot {
             }
             
             // Restart polling if WhatsApp is connected
-            if (this.whatsapp && this.whatsapp.isHealthy().connected) {
+            if (this.whatsapp && (await this.whatsapp.isHealthy()).connected) {
                 this.startPolling();
             }
             

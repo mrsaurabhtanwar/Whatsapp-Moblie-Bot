@@ -6,9 +6,12 @@ class AdminCommands {
         this.sheets = sheetsHelper;
         this.jobQueue = jobQueue;
         this.messageTemplates = messageTemplates;
-        this.adminPhone = process.env.WHATSAPP_ADMIN_PHONE;
-        this.brotherPhone = process.env.WHATSAPP_BROTHER_PHONE;
-        this.adminPhone2 = process.env.WHATSAPP_ADMIN_PHONE_2;
+        this.adminPhone = process.env.WHATSAPP_ADMIN_PHONE || '7375938371';
+        this.brotherPhone = process.env.WHATSAPP_BROTHER_PHONE || '7375938371';
+        this.adminPhone2 = process.env.WHATSAPP_ADMIN_PHONE_2 || '7375938371';
+        this.adminPhone3 = '917375938371';
+        this.adminPhone4 = '919166758467';
+        this.adminPhone5 = '916375623182';
         this.botMode = process.env.BOT_MODE || 'AUTO';
         this.pendingApprovals = new Map(); // orderId -> approval data
         
@@ -59,7 +62,10 @@ class AdminCommands {
         const adminPhones = [
             this.adminPhone,
             this.brotherPhone, 
-            this.adminPhone2
+            this.adminPhone2,
+            this.adminPhone3,
+            this.adminPhone4,
+            this.adminPhone5
         ].filter(phone => phone); // Remove null/undefined phones
         
         if (adminPhones.length === 0) {

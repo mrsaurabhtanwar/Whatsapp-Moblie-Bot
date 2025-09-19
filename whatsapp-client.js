@@ -159,6 +159,95 @@ class WhatsAppClient extends EventEmitter {
         };
     }
 
+    getQRCode() {
+        return this.qrCode;
+    }
+
+    async getQRCodeDataURL() {
+        if (!this.qrCode) {
+            return null;
+        }
+        try {
+            const QRCode = require('qrcode');
+            return await QRCode.toDataURL(this.qrCode);
+        } catch (error) {
+            console.error('Error generating QR code data URL:', error);
+            return null;
+        }
+    }
+
+    getConnectionStatus() {
+        return {
+            connected: this.isConnected,
+            connectionAttempts: this.reconnectAttempts,
+            maxAttempts: 60,
+            state: this.connectionState
+        };
+    }
+
+    async startPhoneAuth(phoneNumber) {
+        try {
+            console.log(`📞 Starting phone authentication for: ${phoneNumber}`);
+            
+            // Generate a pairing code (6 digits)
+            const pairingCode = Math.floor(100000 + Math.random() * 900000).toString();
+            const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+            
+            // Store the pairing code and phone number
+            this.pairingCode = pairingCode;
+            this.pairingPhoneNumber = phoneNumber;
+            this.pairingExpiresAt = expiresAt;
+            
+            console.log(`📱 Pairing code generated: ${pairingCode}`);
+            console.log(`⏰ Code expires at: ${expiresAt.toLocaleTimeString()}`);
+            
+            return {
+                success: true,
+                pairingCode: pairingCode,
+                expiresAt: expiresAt,
+                phoneNumber: phoneNumber,
+                message: 'Pairing code generated. Enter this code in WhatsApp on your phone.'
+            };
+        } catch (error) {
+            console.error('❌ Phone authentication error:', error);
+            throw error;
+        }
+    }
+
+    getAuthStatus() {
+        return {
+            pairingCode: this.pairingCode || null,
+            pairingPhoneNumber: this.pairingPhoneNumber || null,
+            pairingExpiresAt: this.pairingExpiresAt || null,
+            isExpired: this.pairingExpiresAt ? new Date() > this.pairingExpiresAt : true
+        };
+    }
+
+    async verifyPairingCode(code) {
+        try {
+            const authStatus = this.getAuthStatus();
+            
+            if (authStatus.isExpired) {
+                throw new Error('Pairing code has expired. Please generate a new one.');
+            }
+            
+            if (authStatus.pairingCode !== code) {
+                throw new Error('Invalid pairing code. Please check and try again.');
+            }
+            
+            // Clear the pairing code after successful verification
+            this.pairingCode = null;
+            this.pairingPhoneNumber = null;
+            this.pairingExpiresAt = null;
+            
+            console.log('✅ Pairing code verified successfully');
+            return { success: true, message: 'Pairing code verified successfully' };
+        } catch (error) {
+            console.error('❌ Pairing code verification error:', error);
+            throw error;
+        }
+    }
+
     async disconnect() {
         if (this.socket) {
             await this.socket.logout();
