@@ -49,6 +49,32 @@ class AdminCommands {
                 await this.handleRestartCommand();
             } else if (command.startsWith('TEMPLATE ')) {
                 await this.handleTemplateCommand(command);
+            } else if (command === 'CLEAR') {
+                await this.handleClearCommand();
+            } else if (command === 'LOGS') {
+                await this.handleLogsCommand();
+            } else if (command === 'MODE') {
+                await this.handleModeCommand();
+            } else if (command.startsWith('MODE ')) {
+                await this.handleSetModeCommand(command);
+            } else if (command === 'TEST') {
+                await this.handleTestCommand();
+            } else if (command.startsWith('TEST ')) {
+                await this.handleTestMessageCommand(command);
+            } else if (command === 'KILLSWITCH') {
+                await this.handleKillSwitchCommand();
+            } else if (command === 'KILLSWITCH ON') {
+                await this.handleKillSwitchOnCommand();
+            } else if (command === 'KILLSWITCH OFF') {
+                await this.handleKillSwitchOffCommand();
+            } else if (command === 'STATS') {
+                await this.handleStatsCommand();
+            } else if (command === 'PING') {
+                await this.handlePingCommand();
+            } else if (command === 'BACKUP') {
+                await this.handleBackupCommand();
+            } else if (command === 'CLEANUP') {
+                await this.handleCleanupCommand();
             } else {
                 await this.handleUnknownCommand(command);
             }
@@ -199,25 +225,49 @@ Pending Approvals: ${this.pendingApprovals.size}`;
     async handleHelpCommand() {
         const helpMessage = `🤖 ADMIN COMMANDS
 
-📋 Available Commands:
+📋 Core Commands:
 • APPROVE #ORDER_ID - Approve a pending order
 • SEND #ORDER_ID - Manually send notification for order
-• STATUS - Show bot status
+• STATUS - Show bot status and health
 • ORDERS - Show recent orders
 • QUEUE - Show queue statistics
 • RESTART - Restart WhatsApp connection
+
+📝 Template Commands:
 • TEMPLATE LIST - Show available templates
 • TEMPLATE PREVIEW [TYPE] - Preview template
-• HELP - Show this help message
+
+🔧 Control Commands:
+• MODE - Show current bot mode
+• MODE [AUTO/APPROVAL/MANUAL] - Change bot mode
+• CLEAR - Clear pending approvals and queue
+• KILLSWITCH - Show kill switch status
+• KILLSWITCH ON - Activate emergency kill switch
+• KILLSWITCH OFF - Deactivate kill switch
+
+🧪 Testing Commands:
+• TEST - Send test message to admin
+• TEST [PHONE] [MESSAGE] - Send test message to specific phone
+
+📊 Monitoring Commands:
+• STATS - Show detailed statistics
+• LOGS - Show recent log entries
+• PING - Test bot responsiveness
+
+🛠️ Maintenance Commands:
+• BACKUP - Create data backup
+• CLEANUP - Clean old data and logs
 
 📝 Examples:
 • APPROVE #12345
 • SEND #12345
 • STATUS
-• TEMPLATE LIST
-• TEMPLATE PREVIEW order_ready
+• MODE AUTO
+• TEST 917375938371 Hello test
+• KILLSWITCH ON
+• STATS
 
-🔄 Bot Mode: ${this.botMode}
+🔄 Current Bot Mode: ${this.botMode}
 
 👥 Admin Numbers:
 • Admin 1: ${this.adminPhone || 'Not configured'}
@@ -431,6 +481,410 @@ Type HELP to see available commands.`;
             orderData: data.orderData,
             timestamp: data.timestamp
         }));
+    }
+
+    // ==================== NEW COMMAND HANDLERS ====================
+
+    async handleClearCommand() {
+        try {
+            const clearedApprovals = this.pendingApprovals.size;
+            this.pendingApprovals.clear();
+            
+            let message = `🧹 CLEARED DATA\n\n`;
+            message += `✅ Cleared ${clearedApprovals} pending approvals\n`;
+            
+            // Clear queue if available
+            if (this.jobQueue && typeof this.jobQueue.clear === 'function') {
+                await this.jobQueue.clear();
+                message += `✅ Cleared job queue\n`;
+            }
+            
+            message += `\nAll pending data has been cleared.`;
+            
+            await this.sendToAdmin(message);
+            logger.info('Admin cleared all pending data');
+        } catch (error) {
+            logger.error('Error handling clear command:', error.message);
+            await this.sendToAdmin(`❌ Error clearing data: ${error.message}`);
+        }
+    }
+
+    async handleLogsCommand() {
+        try {
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Get recent logs from different log files
+            const logFiles = [
+                { name: 'Combined', path: path.join(__dirname, '../../logs/combined-0.log') },
+                { name: 'Error', path: path.join(__dirname, '../../logs/err-0.log') },
+                { name: 'Output', path: path.join(__dirname, '../../logs/out-0.log') }
+            ];
+            
+            let message = `📋 RECENT LOGS\n\n`;
+            
+            for (const logFile of logFiles) {
+                try {
+                    if (fs.existsSync(logFile.path)) {
+                        const content = fs.readFileSync(logFile.path, 'utf8');
+                        const lines = content.split('\n').filter(line => line.trim());
+                        const recentLines = lines.slice(-5); // Last 5 lines
+                        
+                        message += `📄 ${logFile.name} Logs:\n`;
+                        recentLines.forEach(line => {
+                            message += `   ${line.substring(0, 100)}${line.length > 100 ? '...' : ''}\n`;
+                        });
+                        message += `\n`;
+                    }
+                } catch (fileError) {
+                    message += `❌ Could not read ${logFile.name} logs\n`;
+                }
+            }
+            
+            await this.sendToAdmin(message);
+        } catch (error) {
+            logger.error('Error handling logs command:', error.message);
+            await this.sendToAdmin(`❌ Error getting logs: ${error.message}`);
+        }
+    }
+
+    async handleModeCommand() {
+        try {
+            const modeMessage = `🔄 BOT MODE STATUS
+
+Current Mode: ${this.botMode}
+
+📋 Mode Descriptions:
+• AUTO - Bot automatically sends messages when orders are ready
+• APPROVAL - Bot requests approval before sending messages
+• MANUAL - Bot only sends when manually triggered
+
+To change mode, use: MODE [AUTO/APPROVAL/MANUAL]`;
+
+            await this.sendToAdmin(modeMessage);
+        } catch (error) {
+            logger.error('Error handling mode command:', error.message);
+            await this.sendToAdmin(`❌ Error getting mode: ${error.message}`);
+        }
+    }
+
+    async handleSetModeCommand(command) {
+        try {
+            const newMode = command.replace('MODE ', '').trim().toUpperCase();
+            const validModes = ['AUTO', 'APPROVAL', 'MANUAL'];
+            
+            if (!validModes.includes(newMode)) {
+                await this.sendToAdmin(`❌ Invalid mode. Use: AUTO, APPROVAL, or MANUAL`);
+                return;
+            }
+            
+            this.botMode = newMode;
+            
+            await this.sendToAdmin(`✅ Bot mode changed to: ${newMode}
+
+📋 Mode Description:
+${newMode === 'AUTO' ? '• Bot will automatically send messages when orders are ready' : ''}
+${newMode === 'APPROVAL' ? '• Bot will request approval before sending messages' : ''}
+${newMode === 'MANUAL' ? '• Bot will only send when manually triggered' : ''}
+
+Mode change will take effect immediately.`);
+            
+            logger.info(`Bot mode changed to ${newMode} by admin`);
+        } catch (error) {
+            logger.error('Error handling set mode command:', error.message);
+            await this.sendToAdmin(`❌ Error changing mode: ${error.message}`);
+        }
+    }
+
+    async handleTestCommand() {
+        try {
+            const testMessage = `🧪 TEST MESSAGE
+
+This is a test message from your WhatsApp bot!
+
+✅ Bot is working correctly
+✅ Admin commands are functional
+✅ Message sending is working
+
+Time: ${new Date().toLocaleString()}
+Bot Mode: ${this.botMode}`;
+
+            await this.sendToAdmin(testMessage);
+            logger.info('Test message sent to admin');
+        } catch (error) {
+            logger.error('Error handling test command:', error.message);
+            await this.sendToAdmin(`❌ Error sending test message: ${error.message}`);
+        }
+    }
+
+    async handleTestMessageCommand(command) {
+        try {
+            const parts = command.split(' ');
+            if (parts.length < 3) {
+                await this.sendToAdmin('❌ Usage: TEST [PHONE] [MESSAGE]\nExample: TEST 917375938371 Hello test');
+                return;
+            }
+            
+            const phone = parts[1];
+            const message = parts.slice(2).join(' ');
+            
+            // Format phone number
+            const formattedPhone = phone.replace(/\D/g, '');
+            const jid = formattedPhone + '@s.whatsapp.net';
+            
+            await this.whatsapp.sendMessage(jid, message);
+            
+            await this.sendToAdmin(`✅ Test message sent to ${phone}
+
+Message: "${message}"
+Time: ${new Date().toLocaleString()}`);
+            
+            logger.info(`Test message sent to ${phone} by admin`);
+        } catch (error) {
+            logger.error('Error handling test message command:', error.message);
+            await this.sendToAdmin(`❌ Error sending test message: ${error.message}`);
+        }
+    }
+
+    async handleKillSwitchCommand() {
+        try {
+            // Check if kill switch is available in safety manager
+            let killSwitchStatus = 'Unknown';
+            try {
+                if (this.whatsapp && this.whatsapp.safetyManager) {
+                    killSwitchStatus = await this.whatsapp.safetyManager.isKillSwitchActive() ? 'ACTIVE' : 'INACTIVE';
+                }
+            } catch (error) {
+                killSwitchStatus = 'Not Available';
+            }
+            
+            const statusMessage = `🚨 KILL SWITCH STATUS
+
+Status: ${killSwitchStatus}
+
+📋 Kill Switch Commands:
+• KILLSWITCH ON - Activate emergency stop
+• KILLSWITCH OFF - Deactivate emergency stop
+
+⚠️ When active, ALL message sending is blocked.`;
+
+            await this.sendToAdmin(statusMessage);
+        } catch (error) {
+            logger.error('Error handling kill switch command:', error.message);
+            await this.sendToAdmin(`❌ Error getting kill switch status: ${error.message}`);
+        }
+    }
+
+    async handleKillSwitchOnCommand() {
+        try {
+            if (this.whatsapp && this.whatsapp.safetyManager) {
+                await this.whatsapp.safetyManager.activateKillSwitch('Activated by admin command');
+                await this.sendToAdmin(`🚨 KILL SWITCH ACTIVATED
+
+⚠️ ALL message sending is now BLOCKED
+⚠️ This is an emergency stop for the bot
+⚠️ Use KILLSWITCH OFF to deactivate
+
+Time: ${new Date().toLocaleString()}`);
+            } else {
+                await this.sendToAdmin('❌ Kill switch not available in current configuration');
+            }
+        } catch (error) {
+            logger.error('Error handling kill switch on command:', error.message);
+            await this.sendToAdmin(`❌ Error activating kill switch: ${error.message}`);
+        }
+    }
+
+    async handleKillSwitchOffCommand() {
+        try {
+            if (this.whatsapp && this.whatsapp.safetyManager) {
+                await this.whatsapp.safetyManager.deactivateKillSwitch();
+                await this.sendToAdmin(`✅ KILL SWITCH DEACTIVATED
+
+✅ Message sending is now ENABLED
+✅ Bot can resume normal operations
+
+Time: ${new Date().toLocaleString()}`);
+            } else {
+                await this.sendToAdmin('❌ Kill switch not available in current configuration');
+            }
+        } catch (error) {
+            logger.error('Error handling kill switch off command:', error.message);
+            await this.sendToAdmin(`❌ Error deactivating kill switch: ${error.message}`);
+        }
+    }
+
+    async handleStatsCommand() {
+        try {
+            const whatsappHealth = this.whatsapp.isHealthy();
+            const sheetsHealth = await this.sheets.healthCheck();
+            
+            // Get detailed statistics
+            let statsMessage = `📊 DETAILED STATISTICS
+
+🤖 WhatsApp Status:
+• Connected: ${whatsappHealth.connected ? '✅' : '❌'}
+• Socket: ${whatsappHealth.socket ? '✅' : '❌'}
+• Reconnect Attempts: ${whatsappHealth.reconnectAttempts || 0}
+
+📋 Google Sheets:
+• Status: ${sheetsHealth.status === 'healthy' ? '✅ Connected' : '❌ Error'}
+${sheetsHealth.error ? `• Error: ${sheetsHealth.error}` : ''}
+
+🔄 Bot Configuration:
+• Mode: ${this.botMode}
+• Pending Approvals: ${this.pendingApprovals.size}
+• Admin Phones: ${[this.adminPhone, this.brotherPhone, this.adminPhone2].filter(p => p).length}
+
+⏰ System Info:
+• Uptime: ${Math.floor(process.uptime() / 60)} minutes
+• Memory: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)} MB
+• Time: ${new Date().toLocaleString()}`;
+
+            await this.sendToAdmin(statsMessage);
+        } catch (error) {
+            logger.error('Error handling stats command:', error.message);
+            await this.sendToAdmin(`❌ Error getting statistics: ${error.message}`);
+        }
+    }
+
+    async handlePingCommand() {
+        try {
+            const startTime = Date.now();
+            
+            // Test WhatsApp connection
+            const whatsappHealth = this.whatsapp.isHealthy();
+            const responseTime = Date.now() - startTime;
+            
+            const pingMessage = `🏓 PONG!
+
+Response Time: ${responseTime}ms
+WhatsApp: ${whatsappHealth.connected ? '✅ Connected' : '❌ Disconnected'}
+Time: ${new Date().toLocaleString()}
+
+Bot is responsive and working! 🚀`;
+
+            await this.sendToAdmin(pingMessage);
+        } catch (error) {
+            logger.error('Error handling ping command:', error.message);
+            await this.sendToAdmin(`❌ Error with ping: ${error.message}`);
+        }
+    }
+
+    async handleBackupCommand() {
+        try {
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Create backup of important data
+            const backupDir = path.join(__dirname, '../../backups');
+            if (!fs.existsSync(backupDir)) {
+                fs.mkdirSync(backupDir, { recursive: true });
+            }
+            
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const backupFile = path.join(backupDir, `backup-${timestamp}.json`);
+            
+            const backupData = {
+                timestamp: new Date().toISOString(),
+                pendingApprovals: Array.from(this.pendingApprovals.entries()),
+                botMode: this.botMode,
+                adminPhones: [this.adminPhone, this.brotherPhone, this.adminPhone2],
+                systemInfo: {
+                    uptime: process.uptime(),
+                    memory: process.memoryUsage(),
+                    nodeVersion: process.version
+                }
+            };
+            
+            fs.writeFileSync(backupFile, JSON.stringify(backupData, null, 2));
+            
+            await this.sendToAdmin(`💾 BACKUP CREATED
+
+✅ Backup saved: backup-${timestamp}.json
+📁 Location: backups/ directory
+📊 Data included:
+• Pending approvals
+• Bot configuration
+• System information
+
+Time: ${new Date().toLocaleString()}`);
+            
+            logger.info(`Backup created: ${backupFile}`);
+        } catch (error) {
+            logger.error('Error handling backup command:', error.message);
+            await this.sendToAdmin(`❌ Error creating backup: ${error.message}`);
+        }
+    }
+
+    async handleCleanupCommand() {
+        try {
+            const fs = require('fs');
+            const path = require('path');
+            
+            let cleanedItems = 0;
+            let message = `🧹 CLEANUP COMPLETED\n\n`;
+            
+            // Clean old log files (keep last 5)
+            const logDir = path.join(__dirname, '../../logs');
+            if (fs.existsSync(logDir)) {
+                const logFiles = fs.readdirSync(logDir)
+                    .filter(file => file.endsWith('.log'))
+                    .map(file => ({
+                        name: file,
+                        path: path.join(logDir, file),
+                        time: fs.statSync(path.join(logDir, file)).mtime
+                    }))
+                    .sort((a, b) => b.time - a.time);
+                
+                // Keep only last 5 log files
+                const filesToDelete = logFiles.slice(5);
+                filesToDelete.forEach(file => {
+                    try {
+                        fs.unlinkSync(file.path);
+                        cleanedItems++;
+                    } catch (error) {
+                        // Ignore errors
+                    }
+                });
+                
+                message += `📄 Log files: Kept ${Math.min(5, logFiles.length)}, deleted ${filesToDelete.length}\n`;
+            }
+            
+            // Clean old backups (keep last 10)
+            const backupDir = path.join(__dirname, '../../backups');
+            if (fs.existsSync(backupDir)) {
+                const backupFiles = fs.readdirSync(backupDir)
+                    .filter(file => file.startsWith('backup-') && file.endsWith('.json'))
+                    .map(file => ({
+                        name: file,
+                        path: path.join(backupDir, file),
+                        time: fs.statSync(path.join(backupDir, file)).mtime
+                    }))
+                    .sort((a, b) => b.time - a.time);
+                
+                const backupsToDelete = backupFiles.slice(10);
+                backupsToDelete.forEach(file => {
+                    try {
+                        fs.unlinkSync(file.path);
+                        cleanedItems++;
+                    } catch (error) {
+                        // Ignore errors
+                    }
+                });
+                
+                message += `💾 Backup files: Kept ${Math.min(10, backupFiles.length)}, deleted ${backupsToDelete.length}\n`;
+            }
+            
+            message += `\n✅ Total items cleaned: ${cleanedItems}\n`;
+            message += `⏰ Time: ${new Date().toLocaleString()}`;
+            
+            await this.sendToAdmin(message);
+            logger.info(`Cleanup completed: ${cleanedItems} items cleaned`);
+        } catch (error) {
+            logger.error('Error handling cleanup command:', error.message);
+            await this.sendToAdmin(`❌ Error during cleanup: ${error.message}`);
+        }
     }
 }
 
