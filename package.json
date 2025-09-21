@@ -1,57 +1,58 @@
 {
-  "name": "whatsapp-sheet-bot",
+  "name": "whatsapp-tailor-bot",
   "version": "2.0.0",
-  "description": "Self-hosted WhatsApp notification bot with real-time webhook integration for Google Sheets",
-  "main": "src/core/bot.js",
+  "description": "Fresh WhatsApp Bot for RS Tailor & Fabric Shop - Complete rewrite with new architecture",
+  "main": "src/app.js",
   "scripts": {
-    "start": "node src/core/bot.js",
-    "dev": "node src/core/bot.js",
-    "test": "node scripts/test-bot.js",
-    "test:developer": "node scripts/test-developer-whitelist.js",
-    "pm2:start": "pm2 start config/ecosystem.config.js",
-    "pm2:stop": "pm2 stop whatsapp-sheet-bot",
-    "pm2:restart": "pm2 restart whatsapp-sheet-bot",
-    "pm2:logs": "pm2 logs whatsapp-sheet-bot",
-    "pm2:status": "pm2 status",
-    "setup": "npm install && echo Setup complete!",
-    "deploy": "npm run pm2:start && pm2 save && pm2 startup",
-    "monitor": "pm2 monit",
-    "clean": "node scripts/cleanup.js"
-  },
-  "dependencies": {
-    "@whiskeysockets/baileys": "^6.6.0",
-    "axios": "^1.12.1",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "googleapis": "^128.0.0",
-    "p-queue": "^7.4.1",
-    "pino": "^8.16.2",
-    "qrcode": "^1.5.3",
-    "sqlite3": "^5.1.7"
-  },
-  "engines": {
-    "node": ">=18.0.0"
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "test": "jest",
+    "lint": "eslint src/**/*.js",
+    "setup": "node scripts/setup.js"
   },
   "keywords": [
     "whatsapp",
     "bot",
-    "google-sheets",
-    "baileys",
-    "notification",
-    "orders",
-    "automation"
+    "tailor",
+    "fabric",
+    "automation",
+    "customer-service"
   ],
-  "author": "WhatsApp Sheet Bot Developer",
+  "author": "RS Tailor & Fabric",
   "license": "MIT",
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.0.0",
+    "qrcode-terminal": "^0.12.0",
+    "googleapis": "^128.0.0",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.0.0",
+    "dotenv": "^16.3.1",
+    "pino": "^8.15.0",
+    "pino-pretty": "^10.2.0",
+    "moment": "^2.29.4",
+    "node-cron": "^3.0.2",
+    "sqlite3": "^5.1.6",
+    "bcrypt": "^5.1.1",
+    "jsonwebtoken": "^9.0.2",
+    "rate-limiter-flexible": "^3.0.0",
+    "validator": "^13.11.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "jest": "^29.7.0",
+    "eslint": "^8.48.0",
+    "@types/node": "^20.5.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/whatsapp-sheet-bot.git"
+    "url": "git+https://github.com/mrsaurabhtanwar/Whatsapp-Moblie-Bot.git"
   },
   "bugs": {
-    "url": "https://github.com/your-username/whatsapp-sheet-bot/issues"
+    "url": "https://github.com/mrsaurabhtanwar/Whatsapp-Moblie-Bot/issues"
   },
-  "homepage": "https://github.com/your-username/whatsapp-sheet-bot#readme",
-  "devDependencies": {
-    "eslint": "^9.36.0"
-  }
+  "homepage": "https://github.com/mrsaurabhtanwar/Whatsapp-Moblie-Bot#readme"
 }
