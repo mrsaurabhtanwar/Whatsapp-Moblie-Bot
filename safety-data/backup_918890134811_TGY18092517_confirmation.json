@@ -1,0 +1,10 @@
+{
+  "phone": "918890134811",
+  "orderId": "TGY18092517",
+  "messageType": "confirmation",
+  "contentHash": "5ca42c940f17d86b",
+  "timestamp": 1758368813487,
+  "success": false,
+  "errorMessage": "Missing required field: phone",
+  "sent": false
+}

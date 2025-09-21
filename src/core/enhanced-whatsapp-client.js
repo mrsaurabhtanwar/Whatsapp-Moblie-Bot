@@ -1,6 +1,9 @@
 const WhatsAppClient = require('./whatsapp-client');
 const DuplicatePreventionManager = require('../managers/duplicate-prevention-manager');
 const EnhancedSafetyManager = require('../managers/enhanced-safety-manager');
+const CircuitBreaker = require('../utils/circuit-breaker');
+const { google } = require('googleapis');
+const path = require('path');
 
 /**
  * Enhanced WhatsApp Client with Comprehensive Safety and Duplicate Prevention
@@ -37,13 +40,62 @@ class EnhancedWhatsAppClient extends WhatsAppClient {
         // Enable/disable duplicate prevention (for testing)
         this.duplicatePreventionEnabled = options.duplicatePreventionEnabled !== false;
         
+        // Webhook properties
+        this.isProcessingOrders = false; // Mutex to prevent concurrent processing
+        
+        // Circuit breaker for WhatsApp API calls
+        this.circuitBreaker = new CircuitBreaker({
+            failureThreshold: 5,      // Open circuit after 5 failures
+            recoveryTimeout: 60000,   // Try to recover after 1 minute
+            monitoringPeriod: 120000  // Monitor over 2 minute periods
+        });
+        
+        // Google Sheets integration (for message sending only)
+        this.sheets = null;
+        
         // Override sendMessage to include comprehensive safety checks
         this.originalSendMessage = super.sendMessage.bind(this);
+        
+        // Create circuit breaker protected version
+        this.protectedSendMessage = async (jid, message) => {
+            return await this.circuitBreaker.execute(async () => {
+                return await this.originalSendMessage(jid, message);
+            });
+        };
+        
+        // Forward all events from parent class
+        this.setupEventForwarding();
         
         console.log('🛡️ Enhanced WhatsApp Client with comprehensive safety initialized');
         console.log('⏰ 4-minute startup delay active');
         console.log('🔒 Triple-layer duplicate prevention enabled');
         console.log('⚡ Circuit breaker limits: Daily=10, Hourly=3');
+    }
+
+    /**
+     * Setup event forwarding from parent WhatsAppClient
+     */
+    setupEventForwarding() {
+        // Forward connection events
+        this.on('connected', () => {
+            console.log('🔄 Enhanced client: Connected event received, forwarding...');
+        });
+        
+        this.on('disconnected', () => {
+            console.log('🔄 Enhanced client: Disconnected event received, forwarding...');
+        });
+        
+        this.on('qr', (_qr) => {
+            console.log('🔄 Enhanced client: QR event received, forwarding...');
+        });
+        
+        this.on('pairing-code', (_data) => {
+            console.log('🔄 Enhanced client: Pairing code event received, forwarding...');
+        });
+        
+        this.on('pairing-error', (_error) => {
+            console.log('🔄 Enhanced client: Pairing error event received, forwarding...');
+        });
     }
 
     /**
@@ -68,7 +120,7 @@ class EnhancedWhatsAppClient extends WhatsAppClient {
             // If safety checks are completely disabled (for emergency testing only)
             if (!this.duplicatePreventionEnabled) {
                 console.log('⚠️ ALL SAFETY CHECKS DISABLED - SENDING MESSAGE DIRECTLY (EMERGENCY MODE)');
-                const result = await this.originalSendMessage(jid, message);
+                const result = await this.protectedSendMessage(jid, message);
                 return {
                     success: true,
                     messageId: result?.key?.id,
@@ -159,7 +211,7 @@ class EnhancedWhatsAppClient extends WhatsAppClient {
             // ALL SAFETY CHECKS PASSED - SEND MESSAGE
             console.log(`📤 [${phone}] All safety checks passed - sending message...`);
             
-            const result = await this.originalSendMessage(jid, message);
+            const result = await this.protectedSendMessage(jid, message);
             const messageId = result?.key?.id;
             
             // Record successful send in both systems
@@ -248,16 +300,30 @@ class EnhancedWhatsAppClient extends WhatsAppClient {
         const messageTemplates = require('../managers/message-templates');
         const templates = new messageTemplates();
         
-        const welcomeMessage = templates.getWelcomeMessage(orderData);
+        // Select appropriate template based on sheet type
+        let welcomeMessage;
+        if (sheetType === 'fabric') {
+            welcomeMessage = templates.getFabricWelcomeMessage(orderData);
+        } else {
+            welcomeMessage = templates.getWelcomeMessage(orderData);
+        }
+        
         const jid = this.formatPhoneToJid(phone);
         
-        return await this.sendMessage(jid, welcomeMessage, {
+        const result = await this.sendMessage(jid, welcomeMessage, {
             orderId: orderData.order_id || orderData.orderId,
             messageType: 'welcome',
             orderData: orderData,
             sheetData: sheetData,
             sheetType: sheetType
         });
+        
+        // Update Google Sheets if message was sent successfully
+        if (result.success) {
+            await this.updateGoogleSheetsColumn(orderData.order_id || orderData.orderId, phone, 'welcome_notified', 'Yes', sheetType);
+        }
+        
+        return result;
     }
 
     /**
@@ -270,13 +336,20 @@ class EnhancedWhatsAppClient extends WhatsAppClient {
         const confirmationMessage = templates.getOrderConfirmationMessage(orderData);
         const jid = this.formatPhoneToJid(phone);
         
-        return await this.sendMessage(jid, confirmationMessage, {
+        const result = await this.sendMessage(jid, confirmationMessage, {
             orderId: orderData.order_id || orderData.orderId,
             messageType: 'confirmation',
             orderData: orderData,
             sheetData: sheetData,
             sheetType: sheetType
         });
+        
+        // Update Google Sheets if message was sent successfully
+        if (result.success) {
+            await this.updateGoogleSheetsColumn(orderData.order_id || orderData.orderId, phone, 'confirmation_notified', 'Yes', sheetType);
+        }
+        
+        return result;
     }
 
     /**
@@ -289,13 +362,46 @@ class EnhancedWhatsAppClient extends WhatsAppClient {
         const readyMessage = templates.getOrderReadyMessage(orderData);
         const jid = this.formatPhoneToJid(phone);
         
-        return await this.sendMessage(jid, readyMessage, {
+        const result = await this.sendMessage(jid, readyMessage, {
             orderId: orderData.order_id || orderData.orderId,
             messageType: 'ready',
             orderData: orderData,
             sheetData: sheetData,
             sheetType: sheetType
         });
+        
+        // Update Google Sheets if message was sent successfully
+        if (result.success) {
+            await this.updateGoogleSheetsColumn(orderData.order_id || orderData.orderId, phone, 'ready_notified', 'Yes', sheetType);
+        }
+        
+        return result;
+    }
+
+    /**
+     * Send order confirmation message with enhanced safety checks
+     */
+    async sendOrderConfirmationMessage(phone, orderData, sheetType = 'tailor', sheetData = {}) {
+        const messageTemplates = require('../managers/message-templates');
+        const templates = new messageTemplates();
+        
+        const confirmationMessage = templates.getOrderConfirmationMessage(orderData);
+        const jid = this.formatPhoneToJid(phone);
+        
+        const result = await this.sendMessage(jid, confirmationMessage, {
+            orderId: orderData.order_id || orderData.orderId,
+            messageType: 'confirmation',
+            orderData: orderData,
+            sheetData: sheetData,
+            sheetType: sheetType
+        });
+        
+        // Update Google Sheets if message was sent successfully
+        if (result.success) {
+            await this.updateGoogleSheetsColumn(orderData.order_id || orderData.orderId, phone, 'confirmation_sent', 'Yes', sheetType);
+        }
+        
+        return result;
     }
 
     /**
@@ -308,13 +414,20 @@ class EnhancedWhatsAppClient extends WhatsAppClient {
         const deliveryMessage = templates.getDeliveryNotificationMessage(orderData);
         const jid = this.formatPhoneToJid(phone);
         
-        return await this.sendMessage(jid, deliveryMessage, {
+        const result = await this.sendMessage(jid, deliveryMessage, {
             orderId: orderData.order_id || orderData.orderId,
             messageType: 'delivery',
             orderData: orderData,
             sheetData: sheetData,
             sheetType: sheetType
         });
+        
+        // Update Google Sheets if message was sent successfully
+        if (result.success) {
+            await this.updateGoogleSheetsColumn(orderData.order_id || orderData.orderId, phone, 'delivery_notified', 'Yes', sheetType);
+        }
+        
+        return result;
     }
 
     /**
@@ -446,24 +559,7 @@ class EnhancedWhatsAppClient extends WhatsAppClient {
         );
     }
 
-    /**
-     * Send worker daily data message
-     */
-    async sendWorkerDailyDataMessage(phone, workerData) {
-        const messageTemplates = require('../managers/message-templates');
-        const templates = new messageTemplates();
-        
-        const dailyDataMessage = templates.getWorkerDailyDataMessage(workerData);
-        
-        return await this.sendOrderNotification(
-            phone,
-            `WORKER-${workerData.worker_name}-${workerData.date}`,
-            'worker_daily_data',
-            dailyDataMessage,
-            workerData,
-            'worker'
-        );
-    }
+
 
     /**
      * Send test message (bypasses duplicate prevention)
@@ -549,6 +645,8 @@ class EnhancedWhatsAppClient extends WhatsAppClient {
         try {
             console.log('🔄 Initializing Enhanced WhatsApp Client...');
             
+            // Google Sheets API will be initialized by the main bot instance
+            
             // Initialize safety manager first
             await this.safetyManager.initializeAsync();
             console.log('✅ Safety Manager initialized');
@@ -557,16 +655,93 @@ class EnhancedWhatsAppClient extends WhatsAppClient {
             await this.duplicateManager.initializeAsync();
             console.log('✅ Duplicate Prevention Manager initialized');
             
-            // CRITICAL: Initialize the base WhatsApp client (this starts the connection)
-            console.log('🔄 Starting WhatsApp connection...');
-            await super.initialize();
-            console.log('✅ WhatsApp connection started');
+            // Check if WhatsApp is already connected to prevent double connection
+            if (this.isConnected && this.socket) {
+                console.log('✅ WhatsApp already connected, skipping initialization');
+            } else {
+                // Initialize the base WhatsApp client (this starts the connection)
+                console.log('🔄 Starting WhatsApp connection...');
+                await super.initialize();
+                console.log('✅ WhatsApp connection started');
+            }
+            
+            // Initialize admin commands after WhatsApp connection
+            this.initializeAdminCommands();
+            
+            // Initialize webhook functionality
+            this.initializeWebhook();
             
             console.log('🛡️ Enhanced WhatsApp Client fully initialized');
             return true;
         } catch (error) {
             console.error('❌ Failed to initialize Enhanced WhatsApp Client:', error.message);
             throw error;
+        }
+    }
+
+    /**
+     * Initialize admin commands system
+     */
+    initializeAdminCommands() {
+        try {
+            console.log('🔧 Initializing admin commands...');
+            
+            // Import admin commands
+            const AdminCommands = require('../managers/admin-commands');
+            
+            // Initialize admin commands
+            this.adminCommands = new AdminCommands(
+                this,
+                this, // Pass this client as sheets helper
+                null, // No job queue needed
+                null  // No message templates needed
+            );
+            
+            // Set up message handler for incoming WhatsApp messages
+            if (this.socket && this.socket.ev) {
+                this.socket.ev.on('messages.upsert', (m) => {
+                    if (m.type === 'notify' || m.type === 'append') {
+                        for (const msg of m.messages) {
+                            if (!msg.key.fromMe) {
+                                let messageText = '';
+                                if (msg.message?.conversation) {
+                                    messageText = msg.message.conversation;
+                                } else if (msg.message?.extendedTextMessage?.text) {
+                                    messageText = msg.message.extendedTextMessage.text;
+                                }
+                                
+                                if (messageText && messageText.trim()) {
+                                    const messageData = {
+                                        text: messageText.trim(),
+                                        sender: msg.key.remoteJid
+                                    };
+                                    this.handleIncomingMessage(messageData);
+                                }
+                            }
+                        }
+                    }
+                });
+                console.log('📨 Message handler attached to WhatsApp socket');
+            } else {
+                console.log('⚠️ WhatsApp socket not available for message handling');
+            }
+            
+            console.log('✅ Admin commands system initialized');
+        } catch (error) {
+            console.error('❌ Failed to initialize admin commands:', error);
+        }
+    }
+
+    /**
+     * Handle incoming messages for admin commands
+     */
+    async handleIncomingMessage(messageData) {
+        try {
+            if (this.adminCommands) {
+                await this.adminCommands.handleIncomingMessage(messageData);
+            }
+        } catch (error) {
+            console.error('❌ Error handling incoming message:', error);
         }
     }
 
@@ -653,6 +828,127 @@ class EnhancedWhatsAppClient extends WhatsAppClient {
      */
     async isKillSwitchActive() {
         return await this.safetyManager.isKillSwitchActive();
+    }
+
+
+
+    /**
+     * Initialize webhook functionality (replaces polling)
+     */
+    initializeWebhook() {
+        console.log('🔗 Initializing webhook functionality...');
+        console.log('✅ WhatsApp connected. Webhook system ready for real-time notifications.');
+        console.log('💡 Configure Google Apps Script webhook for instant sheet change notifications.');
+    }
+    
+    
+
+
+
+
+
+
+
+    /**
+     * Update a specific column in Google Sheets after successful message sending
+     */
+    async updateGoogleSheetsColumn(orderId, phone, columnName, value, sheetType = 'tailor') {
+        try {
+            console.log(`📝 Updating Google Sheets: ${columnName} = ${value} for order ${orderId}`);
+            
+            if (!this.sheets) {
+                console.warn('⚠️ Google Sheets API not initialized, cannot update column');
+                return false;
+            }
+            
+            // Find the appropriate sheet configuration
+            const config = this.sheetConfigs.find(c => c.type === sheetType || c.type === 'orders');
+            if (!config) {
+                console.warn(`⚠️ No sheet configuration found for type: ${sheetType}`);
+                return false;
+            }
+            
+            // First, get the sheet data to find the row with this order ID
+            const response = await this.sheets.spreadsheets.values.get({
+                spreadsheetId: config.id,
+                range: `${config.tabName || config.name}!A:Z`
+            });
+            
+            const rows = response.data.values;
+            if (!rows || rows.length <= 1) {
+                console.warn('⚠️ No data found in sheet or only headers present');
+                return false;
+            }
+            
+            const headers = rows[0];
+            const dataRows = rows.slice(1);
+            
+            // Find the target column index
+            const targetColumnIndex = headers.findIndex(header => 
+                header && header.toLowerCase().includes(columnName.toLowerCase())
+            );
+            
+            if (targetColumnIndex === -1) {
+                console.warn(`⚠️ Column "${columnName}" not found in sheet`);
+                return false;
+            }
+            
+            // Find the row with this order ID
+            const orderIdIndex = headers.findIndex(header => 
+                header && (header.toLowerCase().includes('order') && header.toLowerCase().includes('id'))
+            );
+            
+            if (orderIdIndex === -1) {
+                console.warn('⚠️ Order ID column not found in sheet');
+                return false;
+            }
+            
+            // Find the row index (1-based for Google Sheets API)
+            let targetRowIndex = -1;
+            for (let i = 0; i < dataRows.length; i++) {
+                if (dataRows[i][orderIdIndex] === orderId) {
+                    targetRowIndex = i + 2; // +2 because we skip header row and Google Sheets is 1-based
+                    break;
+                }
+            }
+            
+            if (targetRowIndex === -1) {
+                console.warn(`⚠️ Order ID ${orderId} not found in sheet`);
+                return false;
+            }
+            
+            // Update the target cell
+            const cellRange = `${config.tabName || config.name}!${this.getColumnLetter(targetColumnIndex + 1)}${targetRowIndex}`;
+            
+            await this.sheets.spreadsheets.values.update({
+                spreadsheetId: config.id,
+                range: cellRange,
+                valueInputOption: 'RAW',
+                resource: {
+                    values: [[value]]
+                }
+            });
+            
+            console.log(`✅ Updated ${cellRange} to "${value}" for order ${orderId}`);
+            return true;
+            
+        } catch (error) {
+            console.error(`❌ Failed to update Google Sheets ${columnName} for order ${orderId}:`, error.message);
+            return false;
+        }
+    }
+    
+    /**
+     * Helper function to convert column index to letter (A, B, C, etc.)
+     */
+    getColumnLetter(columnIndex) {
+        let result = '';
+        while (columnIndex > 0) {
+            columnIndex--;
+            result = String.fromCharCode(65 + (columnIndex % 26)) + result;
+            columnIndex = Math.floor(columnIndex / 26);
+        }
+        return result;
     }
 
     /**

@@ -1,0 +1,10 @@
+{
+  "phone": "919953020706",
+  "orderId": "TJJ19092511",
+  "messageType": "confirmation",
+  "contentHash": "97026037ffec053e",
+  "timestamp": 1758377704640,
+  "success": false,
+  "errorMessage": "Welcome message must be sent before confirmation for order TJJ19092511",
+  "sent": false
+}

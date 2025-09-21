@@ -1,14 +1,14 @@
 const logger = require('pino')({ level: process.env.LOG_LEVEL || 'info' });
 
 /**
- * Optimized Message Templates - Hindi Only
+ * Optimized Message Templates - Hindi Only (Updated Version)
  * 
  * Features:
- * - Custom Hindi templates only (English removed)
+ * - Custom Hindi templates only
  * - Modular template structure
  * - Dynamic template selection
  * - Template caching for performance
- * - Easy customization
+ * - Location added to all signatures
  */
 class MessageTemplates {
     constructor() {
@@ -32,8 +32,7 @@ class MessageTemplates {
             combined_order: this.getCombinedOrderTemplate(),
             
             // Special Templates
-            pickup_complete: this.getPickupCompleteTemplate(),
-            worker_daily_data: this.getWorkerDailyDataTemplate()
+            pickup_complete: this.getPickupCompleteTemplate()
         };
         
         // Template cache for performance
@@ -45,287 +44,278 @@ class MessageTemplates {
 
     // Core Order Templates
     getWelcomeTemplate() {
-        return `🙏{shop_name} में आपका स्वागत है ! आपका दिन शुभ हो !🙏
+        return `🙏 *RS Tailor & Fabric में आपका हार्दिक स्वागत है* 🙏
 
-नमस्ते *{customer_name}* जी! 👋
+प्रिय *{customer_name}* जी,
 
-हमारे साथ जुड़ने के लिए thank you!
-आपकी हर जरूरत पूरी करने के लिए हम तैयार हैं! ✨
+आपका हमारे परिवार में शामिल होना हमारे लिए गर्व की बात है! 
 
-🏪 Shop Information:
-- Timings: {business_hours}
-- 7 days open
-- Contact: {shop_phone}
-- WhatsApp updates automatic मिलते रहेंगे !
+✨ *हमारी विशेषताएं:*
+- 20+ साल का अनुभव
+- बेहतरीन फिटिंग की गारंटी  
+- समय पर डिलीवरी
+- उच्च गुणवत्ता के कपड़े
+- Wedding/Festival स्पेशल कलेक्शन
 
-📱 हमारी Service:
-- Order status updates
-- Ready होने पर instant notification
-- Payment reminders
-- New collection alerts
-- Festival/Wedding Offers 🫴 
+📍 *दुकान का पता:* Main Market, Kumher
+⏰ *समय:* सुबह 10 से रात 8 बजे (सातों दिन)
+📞 *संपर्क:* {shop_phone}
 
-आपका विश्वास ही हमारी सफलता है! 🙏
+💡 *आपको मिलेंगे:*
+- Order की पूरी जानकारी WhatsApp पर
+- तैयार होने पर तुरंत सूचना
+- Special offers की जानकारी
 
-💫 Best quality, Best Service - guaranteed!
+आपके विश्वास के लिए धन्यवाद! 🌟
 
-🏪 RS Tailor & Fabric
-📍 Main Market, Kumher`;
+*RS Tailor & Fabric*
+Main Market, Kumher`;
     }
 
     getOrderConfirmationTemplate() {
-        return `✅ Order Confirm हो गया! ✅
+        return `✅ *आपका ऑर्डर कन्फर्म हो गया है* ✅
 
-Hello *{customer_name}* जी 👋
+प्रिय *{customer_name}* जी,
 
-आपका order confirm है और हमने काम शुरू कर दिया है! 🎯
+आपका ऑर्डर सफलतापूर्वक बुक हो गया है और हमने काम शुरू कर दिया है। 🪡✂️
 
-📋 Order की Details:
-- Order ID: {order_id}
-- Item: {garment_type} 👔
-- Order Date: {order_date}
+📋 *ऑर्डर विवरण:*
+- ऑर्डर नंबर: #{order_id}
+- कपड़े का प्रकार: {garment_type}
+- बुकिंग दिनांक: {order_date}
 
-💰 Amount Details:
-- Total: ₹{total_amount}
-- Advance मिला: ₹{advance_amount} ✅
-- बाकी Amount: ₹{remaining_amount}
+💰 *भुगतान विवरण:*
+- कुल राशि: ₹{total_amount}
+- एडवांस जमा: ₹{advance_payment} ✓
+- शेष राशि: ₹{remaining_amount}
 
-🔔 जैसे ही ready होगा, आपको message भेज देंगे !
-🏪 Shop timing: {business_hours}
+🎯 *विशेष नोट:* {notes}
 
-हमारी दुकान पर आने के लिए धन्यवाद !🙏
+📢 तैयार होते ही आपको सूचना भेज दी जाएगी।
 
-{shop_name} 😊
-Phone: {shop_phone}
+किसी भी प्रश्न के लिए संपर्क करें: {shop_phone}
 
-🏪 RS Tailor & Fabric
-📍 Main Market, Kumher`;
+धन्यवाद! 🙏
+*RS Tailor & Fabric*
+Main Market, Kumher`;
     }
 
     getOrderReadyTemplate() {
-        return `🎉 आपका Order तैयार है ! 🎉
+        return `🎉 *खुशखबरी! आपका कपड़ा तैयार है* 🎉
 
-नमस्ते *{customer_name}* जी 🙏
+प्रिय *{customer_name}* जी,
 
-आपका {garment_type} बिल्कुल ready है ! ✨
-📋 Order ID: {order_id}
-📅 तैयार हुआ: {ready_date}
+आपका {garment_type} पूरी तरह से तैयार है और आपका इंतज़ार कर रहा है! ✨
 
-💰 Payment Details:
-- कुल Amount: ₹{total_amount}
-- Advance जमा: ₹{advance_amount}
-- बाकी Amount: ₹{remaining_amount}
+📋 *विवरण:*
+- ऑर्डर नंबर: #{order_id}
+- तैयार दिनांक: {ready_date}
+- कपड़े का प्रकार: {garment_type}
 
-🏪 Pickup Your Order:
-- Shop time: {business_hours}
-- आज ही आकर ले जाएं !
+💳 *भुगतान स्थिति:*
+- कुल राशि: ₹{total_amount}
+- जमा राशि: ₹{advance_payment}
+- देय राशि: ₹{remaining_amount}
 
-{shop_name} 😊
-Phone: {shop_phone}
+🏪 *पिकअप टाइमिंग:*
+- सुबह 10 से रात 8 बजे
+- फोन: {shop_phone}
 
-⭐ आपका भरोसा हमारे लिए सबकुछ है ! Thank You !
+⭐ *महत्वपूर्ण:* कृपया 3 दिन के अंदर अपना ऑर्डर ले जाएं।
 
-🏪 RS Tailor & Fabric
-📍 Main Market, Kumher`;
+*RS Tailor & Fabric*
+Main Market, Kumher`;
     }
 
     getDeliveryNotificationTemplate() {
-        return `🎉 आपका Order Delivered हो गया! 🎉
+        return `✨ *डिलीवरी सफलतापूर्वक पूर्ण* ✨
 
-नमस्ते *{customer_name}* जी 🙏
+प्रिय *{customer_name}* जी,
 
-आपका {garment_type} successfully deliver हो गया! ✨
-📋 Order ID: {order_id}
-📅 Delivery Date: {delivery_date}
+आपका ऑर्डर सफलतापूर्वक डिलीवर हो गया है। हमें उम्मीद है आपको हमारा काम पसंद आया होगा! 
 
-💰 Payment Summary:
-- Total Amount: ₹{total_amount}
-- Advance जमा: ₹{advance_amount}
-- Final Payment: ₹{final_payment}
+📋 *डिलीवरी विवरण:*
+- ऑर्डर नंबर: #{order_id}
+- डिलीवरी दिनांक: {delivery_date}
+- कपड़ा: {garment_type}
+
+💰 *भुगतान सारांश:*
+- कुल राशि: ₹{total_amount}
+- प्राप्त राशि: ₹{paid_today}
 - बकाया राशि: ₹{remaining_amount}
 
-👕 Care Instructions:
-- हल्के हाथ से Wash करें
-- उल्टा करके Iron करें
-- Dry Clean भी कर सकते हैं
+🌟 *देखभाल के टिप्स:*
+- पहली बार ड्राई क्लीन करवाएं
+- उल्टा करके प्रेस करें
+- धूप में सीधे न सुखाएं
 
-💫 नये Order के लिए दुबारा जरूर आए !
+⭐ कृपया Google पर अपना अनुभव शेयर करें!
 
-Again Thank You 
-{shop_name} ✨
-Phone: {shop_phone}
-
-🏪 RS Tailor & Fabric
-📍 Main Market, Kumher`;
+फिर मिलेंगे! 🙏
+*RS Tailor & Fabric*
+Main Market, Kumher`;
     }
 
     // Reminder Templates
     getPickupReminderTemplate() {
-        return `🔔 Pickup Reminder 🔔
+        return `🔔 *रिमाइंडर: आपका ऑर्डर तैयार है* 🔔
 
-Hello *{customer_name}* जी 😊
+प्रिय *{customer_name}* जी,
 
-आपका order ready है! 🎉
-कब से wait कर रहे हैं आपका...
+आपका {garment_type} पिछले {days_since_ready} दिनों से तैयार है और आपका इंतज़ार कर रहा है। 
 
-📋 Order Info:
-- ID: {order_id}
-- Item: {garment_type}
-- Ready since: {ready_date}
+📋 *ऑर्डर: #{order_id}*
+💰 *बकाया राशि: ₹{remaining_amount}*
 
-🏪 Shop Details:
-- Timings: {business_hours}
-- Contact: {shop_phone}
+कृपया जल्द से जल्द अपना ऑर्डर ले जाएं। 🙏
 
-🚗 जल्दी आ जाइए - waiting है आपका!
+⏰ दुकान खुली है: 10 AM - 8 PM
 
-Thank You - {shop_name} 😊
-
-🏪 RS Tailor & Fabric
-📍 Main Market, Kumher`;
+फोन: {shop_phone}
+*RS Tailor & Fabric*
+Main Market, Kumher`;
     }
 
     getPaymentReminderTemplate() {
-        return `💳 Payment Reminder 💳
+        return `💳 *भुगतान रिमाइंडर* 💳
 
-नमस्ते *{customer_name}* जी 🙏
+प्रिय *{customer_name}* जी,
 
-आपने Order {order_id} ({garment_type}) {order_date} को ले लिया था। 🎯  
+आपने {pickup_date} को अपना {garment_type} (ऑर्डर #{order_id}) ले लिया था।
 
-लेकिन अभी ₹{outstanding_amount} शेष है — कृपया सुविधा अनुसार जल्द Payment कर दीजिए।
+💰 *बकाया राशि: ₹{remaining_amount}*
 
-💰 भुगतान विकल्प:
-* Cash — दुकान पर आकर दे सकते हैं  
-* UPI/Online — नीचे Pay here बटन पर क्लिक करें या भुगतान के बाद PAID भेज दें
+कृपया अपनी सुविधा अनुसार भुगतान कर दें:
 
-🏪 Shop timing: {business_hours}
-  
-{shop_name} ✨ 
-Call/WhatsApp: {shop_phone}
+📱 *UPI/Online:* 8824781960@paytm
+💵 *Cash:* दुकान पर
 
-धन्यवाद 🙏
+भुगतान के बाद "PAID" लिखकर भेजें।
 
-🏪 RS Tailor & Fabric
-📍 Main Market, Kumher`;
+धन्यवाद! 🙏
+*RS Tailor & Fabric*
+Main Market, Kumher`;
     }
 
     // Fabric Templates
     getFabricWelcomeTemplate() {
-        return `🙏{shop_name} में आपका स्वागत है ! आपका दिन शुभ हो !🙏
+        return `🙏 *RS Tailor & Fabric में आपका हार्दिक स्वागत है* 🙏
 
-नमस्ते *{customer_name}* जी! 👋
+प्रिय *{customer_name}* जी,
 
-हमारे साथ जुड़ने के लिए thank you!
-आपकी हर जरूरत पूरी करने के लिए हम तैयार हैं! ✨
+आपका हमारे परिवार में शामिल होना हमारे लिए गर्व की बात है! 
 
-🏪 Shop Information:
-- Timings: {business_hours}
-- 7 days open
-- Contact: {shop_phone}
-- WhatsApp updates automatic मिलते रहेंगे !
+✨ *हमारी विशेषताएं:*
+- 20+ साल का अनुभव
+- बेहतरीन फिटिंग की गारंटी  
+- समय पर डिलीवरी
+- उच्च गुणवत्ता के कपड़े
+- Wedding/Festival स्पेशल कलेक्शन
 
-📱 हमारी Service:
-- Order status updates
-- Ready होने पर instant notification
-- Payment reminders
-- New collection alerts
-- Festival/Wedding Offers 🫴 
+📍 *दुकान का पता:* Main Market, Kumher
+⏰ *समय:* सुबह 10 से रात 8 बजे (सातों दिन)
+📞 *संपर्क:* {shop_phone}
 
-आपका विश्वास ही हमारी सफलता है! 🙏
+💡 *आपको मिलेंगे:*
+- Order की पूरी जानकारी WhatsApp पर
+- तैयार होने पर तुरंत सूचना
+- Special offers की जानकारी
 
-💫 Best quality, Best Service - guaranteed!
+आपके विश्वास के लिए धन्यवाद! 🌟
 
-🏪 RS Tailor & Fabric
-📍 Main Market, Kumher`;
+*RS Tailor & Fabric*
+Main Market, Kumher`;
     }
 
     getFabricPurchaseTemplate() {
-        return `🎉 *Fabric Order Ready!* 🎉
+        return `🛍️ *कपड़ा खरीदी की पुष्टि* 🛍️
 
-नमस्ते *{customer_name}* जी 🙏
+प्रिय *{customer_name}* जी,
 
-आपकी {fabric_type} ({brand_name}) Fabric Ready है! ✨
-📋 Order ID: {order_id}
+आपके द्वारा चुना गया प्रीमियम कपडे की जानकारी इस प्रकार है! ✨
 
-💰 *Payment Details:*
-- Total Amount: ₹{total_amount}
+📦 *खरीदी विवरण:*
+- ऑर्डर नंबर: #F{order_id}
+- मात्रा: {quantity} मीटर
 
-🏪 *Pickup Your Fabric:*
-- Shop time: {business_hours}
-- आज ही आकर ले जाएं !
+💰 *राशि विवरण:*
+- कुल राशि: ₹{fabric_total}
+- जमा राशि: ₹{advance_payment}
+- बकाया: ₹{remaining_amount}
 
-{shop_name} 😊
-Phone: {shop_phone}
+🎁 *विशेष ऑफर:*
+इसी कपड़े की सिलाई पर 5% छूट!
 
-⭐ आपका भरोसा हमारे लिए सबकुछ है ! Thank You !
+📍 कृपया जल्द से जल्द अपना कपड़ा ले जाएं।
 
-🏪 RS Tailor & Fabric
-📍 Main Market, Kumher`;
+संपर्क: {shop_phone}
+*RS Tailor & Fabric*
+Main Market, Kumher`;
     }
 
     getFabricPaymentReminderTemplate() {
-        return `💳 *Fabric Payment Reminder* 💳
+        return `💳 *कपड़े का भुगतान बाकी है* 💳
 
-नमस्ते *{customer_name}* जी 🙏
+प्रिय *{customer_name}* जी,
 
-आपकी {fabric_type} Fabric Order {order_id} के लिए ₹{remaining_amount} शेष है।
+आपके कपड़े के ऑर्डर #F{order_id} का भुगतान अभी भी बाकी है।
 
-कृपया सुविधा अनुसार जल्द Payment कर दीजिए।
+📦 *विवरण:*
+- कपड़ा: {fabric_type} - {brand_name}
+- मात्रा: {quantity} मीटर
+- बकाया राशि: ₹{remaining_amount}
 
-💰 भुगतान विकल्प:
-* Cash — दुकान पर आकर दे सकते हैं  
-* UPI/Online — भुगतान के बाद PAID भेज दें
+कृपया जल्द भुगतान करें:
+📱 UPI: 8824781960@paytm
 
-🏪 Shop timing: {business_hours}
-  
-{shop_name} ✨ 
-Call/WhatsApp: {shop_phone}
-
-धन्यवाद 🙏
-
-🏪 RS Tailor & Fabric
-📍 Main Market, Kumher`;
+धन्यवाद! 🙏
+*RS Tailor & Fabric*
+Main Market, Kumher`;
     }
 
     // Combined Templates
     getCombinedOrderTemplate() {
-        return `🎉 *Complete Order Ready!* 🎉
+        return `✅ आपका Fabric Purchase Complete और Tailoring Order Confirm हो गया है! 
 
 नमस्ते *{customer_name}* जी 🙏
 
-आपका Complete Order (Fabric + Tailoring) Ready है! ✨
-📋 Combined Order ID: {order_id}
-📅 तैयार हुआ: {ready_date}
+👉 आपका Fabric Order ✨
+📋 Order ID: {fabric_order_id}
+📏 Quantity: {fabric_quantity} meters
+📅 Purchase Date: {fabric_purchase_date}
 
-📦 *Order Components:*
-- Fabric Order: {fabric_order_id}
-- Tailor Order: {tailor_order_id}
+💰 Payment Details:
+- Total Amount: ₹{fabric_total}
+- Advance Payment: ₹{fabric_advance}
+- Remaining Amount: ₹{fabric_remaining}
 
-💰 *Payment Details:*
-- Total Amount: ₹{total_amount}
-- Advance जमा: ₹{advance_amount}
-- बाकी Amount: ₹{remaining_amount}
+👉 आपका Tailoring Order ✨
+- Order ID: {tailor_order_id}
+- Item: {garment_type} 👔
+- Ready होगा: {delivery_date}
 
-🏪 *Pickup Your Complete Order:*
-- Shop time: {business_hours}
-- आज ही आकर ले जाएं !
+💰 Amount Details:
+- Total: ₹{tailor_total}
+- Advance मिला: ₹{tailor_advance} ✓
+- बाकी Amount: ₹{tailor_remaining}
 
-{shop_name} 😊
-Phone: {shop_phone}
+🏪 Shop Details:
+- Timing: 10:00 AM - 8:00 PM
+- Phone: {shop_phone}
 
-⭐ आपका भरोसा हमारे लिए सबकुछ है ! Thank You !
+हमारी दुकान पर आने के लिए धन्यवाद ! 🙏
 
-🏪 RS Tailor & Fabric
-📍 Main Market, Kumher`;
+*RS Tailor & Fabric* 😊
+Main Market, Kumher`;
     }
 
     // Special Templates
     getPickupCompleteTemplate() {
         return `🧾 Order Pickup Complete! 🧾
 
-Dear *{customer_name}* जी 🤠
+प्रिय *{customer_name}* जी 🤠
 
-आज ({pickup_date}) आपने अपना {garment_type} (Order {order_id}) successfully ले लिया! 🎉
+आज ({pickup_date}) आपने अपना {garment_type} (Order #{order_id}) successfully ले लिया! 🎉
 
 💳 Payment Summary:
 - Total Amount: ₹{total_amount}
@@ -341,45 +331,8 @@ Dear *{customer_name}* जी 🤠
 💫 नये Order के लिए दुबारा जरूर आए !
 
 Again Thank You 
-{shop_name} ✨
-Phone: {shop_phone}
-
-🏪 RS Tailor & Fabric
-📍 Main Market, Kumher`;
-    }
-
-    getWorkerDailyDataTemplate() {
-        return `📊 *Daily Work Report* 📊
-
-नमस्ते *{worker_name}* जी 🙏
-
-आज ({date}) का आपका work report:
-
-📋 *Today's Work:*
-- Orders Completed: {orders_completed}
-- Orders In Progress: {orders_in_progress}
-- New Orders: {new_orders}
-
-💰 *Payment Collection:*
-- Total Collected: ₹{total_collected}
-- Advance Received: ₹{advance_received}
-- Outstanding: ₹{outstanding_amount}
-
-📈 *Performance:*
-- Efficiency: {efficiency}%
-- Quality Score: {quality_score}/10
-
-🏪 *Tomorrow's Plan:*
-- Priority Orders: {priority_orders}
-- Expected Completion: {expected_completion}
-
-Keep up the good work! 💪
-
-{shop_name} Management
-Phone: {shop_phone}
-
-🏪 RS Tailor & Fabric
-📍 Main Market, Kumher`;
+*RS Tailor & Fabric* ✨
+Main Market, Kumher`;
     }
 
     // Template Processing Methods
@@ -425,34 +378,35 @@ Phone: {shop_phone}
         const defaults = {
             shop_name: 'RS Tailor & Fabric',
             shop_phone: '8824781960',
-            business_hours: '10:00 AM - 7:00 PM',
+            business_hours: '10:00 AM - 8:00 PM',
             customer_name: 'Customer',
             order_id: 'N/A',
             garment_type: 'Item',
             total_amount: '0',
-            advance_amount: '0',
+            advance_payment: '0',
             remaining_amount: '0',
             ready_date: new Date().toLocaleDateString(),
             delivery_date: new Date().toLocaleDateString(),
             pickup_date: new Date().toLocaleDateString(),
             order_date: new Date().toLocaleDateString(),
             outstanding_amount: '0',
+            paid_today: '0',
             final_payment: '0',
             fabric_type: 'Fabric',
             brand_name: 'Brand',
             fabric_order_id: 'N/A',
             tailor_order_id: 'N/A',
-            worker_name: 'Worker',
-            date: new Date().toLocaleDateString(),
-            orders_completed: '0',
-            orders_in_progress: '0',
-            new_orders: '0',
-            total_collected: '0',
-            advance_received: '0',
-            efficiency: '0',
-            quality_score: '0',
-            priority_orders: '0',
-            expected_completion: 'N/A'
+            fabric_total: '0',
+            fabric_advance: '0',
+            fabric_remaining: '0',
+            fabric_quantity: '0',
+            fabric_purchase_date: new Date().toLocaleDateString(),
+            tailor_total: '0',
+            tailor_advance: '0',
+            tailor_remaining: '0',
+            quantity: '0',
+            notes: 'N/A',
+            days_since_ready: '0'
         };
 
         // Merge data with defaults
@@ -511,10 +465,6 @@ Phone: {shop_phone}
 
     getPickupCompleteMessage(orderData) {
         return this.processTemplate('pickup_complete', orderData);
-    }
-
-    getWorkerDailyDataMessage(workerData) {
-        return this.processTemplate('worker_daily_data', workerData);
     }
 
     // Template Management Methods

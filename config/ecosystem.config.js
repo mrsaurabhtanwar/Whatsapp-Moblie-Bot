@@ -1,7 +1,9 @@
+const path = require('path');
+
 module.exports = {
   apps: [{
     name: 'whatsapp-bot',
-    script: 'src/core/bot.js',
+    script: path.resolve(__dirname, '../src/core/bot.js'),
     instances: 1,
     autorestart: true,
     watch: false,

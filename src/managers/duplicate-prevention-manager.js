@@ -7,7 +7,7 @@ const DeveloperConfig = require('../config/developer-config');
  * Comprehensive Duplicate Prevention Manager
  * 
  * This class handles all aspects of duplicate message prevention across:
- * - Multiple bot instances (main-bot.js, worker.js)
+ * - Multiple bot instances (consolidated bot system)
  * - Different message types (welcome, confirmation, ready, delivery, reminders)
  * - Various order types (tailor, fabric, combined)
  * - Restart persistence and cross-instance synchronization
@@ -358,10 +358,20 @@ class DuplicatePreventionManager {
     }
 
     /**
-     * Generate unique message key
+     * Generate unique message key with improved collision resistance
+     * IDEMPOTENCY FIX: Enhanced key generation using SHA-256 hash
      */
-    generateMessageKey(customerPhone, orderId, messageType, sheetType) {
-        return `${customerPhone}|${orderId}|${messageType}|${sheetType}`;
+    generateMessageKey(customerPhone, orderId, messageType, sheetType, contentHash = '') {
+        // Create a composite key with clear delimiters to prevent collisions
+        // Using content hash instead of timestamp for true idempotency
+        const compositeData = `${customerPhone}:${orderId}:${messageType}:${sheetType}:${contentHash}`;
+        
+        // Generate SHA-256 hash for collision resistance while maintaining idempotency
+        const idempotencyKey = crypto.createHash('sha256')
+            .update(compositeData)
+            .digest('hex');
+            
+        return idempotencyKey;
     }
 
     /**

@@ -5,7 +5,7 @@ A self-hosted WhatsApp notification bot that polls Google Sheets for orders and 
 ## ✨ Features
 
 ### 🎯 Core Functionality
-- **Google Sheets Integration**: Polls multiple sheets for orders with various statuses
+- **Google Sheets Integration**: Polls consolidated spreadsheet with multiple tabs (Tailor Orders, Fabric Orders, Combine Orders)
 - **WhatsApp Notifications**: Sends messages via Baileys (WhatsApp Web API)
 - **Persistent Authentication**: Saves WhatsApp session to disk (QR scan once)
 - **Queue Management**: In-memory job queue with retry logic
@@ -91,8 +91,10 @@ Edit `.env` file with your settings:
 ```env
 # Google Sheets Configuration
 GOOGLE_SHEET_ID=your_google_sheet_id_here
-FABRIC_SHEET_ID=your_fabric_sheet_id_here
-COMBINED_SHEET_ID=your_combined_sheet_id_here
+# Note: All orders are now in a single spreadsheet with multiple tabs:
+# - Tailor Orders tab
+# - Fabric Orders tab  
+# - Combine Orders tab
 
 # WhatsApp Configuration
 WHATSAPP_ADMIN_PHONE=1234567890

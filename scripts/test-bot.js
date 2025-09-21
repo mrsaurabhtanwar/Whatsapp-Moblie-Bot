@@ -28,39 +28,32 @@ class BotTester {
     }
 
     async startBot() {
-        console.log('🚀 Starting WhatsApp Bot...');
-        
+        console.log('🚀 Starting WhatsApp Bot (mock mode, polling disabled)...');
+
         return new Promise((resolve, reject) => {
-            this.botProcess = spawn('node', ['main-bot.js'], {
+            this.botProcess = spawn('node', ['src/core/bot.js'], {
                 stdio: ['pipe', 'pipe', 'pipe'],
-                cwd: process.cwd()
+                cwd: process.cwd(),
+                env: {
+                    ...process.env,
+                    MOCK_WHATSAPP: 'true',
+                    DISABLE_POLLING: 'true',
+                    LOG_LEVEL: process.env.LOG_LEVEL || 'info'
+                }
             });
 
-            let startupComplete = false;
-            let connectionEstablished = false;
+            let resolved = false;
 
             this.botProcess.stdout.on('data', (data) => {
                 const output = data.toString();
                 console.log(`[BOT] ${output.trim()}`);
-                
-                // Check for startup completion
-                if (output.includes('Dashboard running at http://localhost:3001')) {
+
+                // Detect startup logs from new entrypoint
+                if (output.includes('WhatsApp Bot running on http://localhost')) {
                     this.testResults.startup = true;
-                    this.testResults.dashboard = true;
-                    if (!startupComplete) {
-                        startupComplete = true;
-                        console.log('✅ Bot started successfully!');
-                        resolve();
-                    }
                 }
-                
-                // Check for WhatsApp connection
                 if (output.includes('WhatsApp connected successfully')) {
                     this.testResults.whatsapp = true;
-                    if (!connectionEstablished) {
-                        connectionEstablished = true;
-                        console.log('✅ WhatsApp connected successfully!');
-                    }
                 }
             });
 
@@ -73,12 +66,34 @@ class BotTester {
                 console.log(`Bot process exited with code ${code}`);
             });
 
-            // Timeout after 30 seconds
-            setTimeout(() => {
-                if (!startupComplete) {
-                    reject(new Error('Bot startup timeout'));
+            // Poll the dashboard to detect readiness (up to 30s)
+            const startTime = Date.now();
+            const checkReady = () => {
+                if (Date.now() - startTime > 30000) {
+                    if (!resolved) {
+                        resolved = true;
+                        reject(new Error('Bot startup timeout'));
+                    }
+                    return;
                 }
-            }, 30000);
+
+                const req = http.get('http://localhost:3001', (res) => {
+                    if (res.statusCode === 200 && !resolved) {
+                        this.testResults.startup = true;
+                        this.testResults.dashboard = true;
+                        resolved = true;
+                        console.log('✅ Bot started successfully!');
+                        resolve();
+                    } else {
+                        setTimeout(checkReady, 1000);
+                    }
+                });
+
+                req.on('error', () => setTimeout(checkReady, 1000));
+                req.setTimeout(2000, () => { try { req.destroy(); } catch {} });
+            };
+
+            setTimeout(checkReady, 1000);
         });
     }
 

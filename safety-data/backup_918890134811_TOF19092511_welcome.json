@@ -1,0 +1,10 @@
+{
+  "phone": "918890134811",
+  "orderId": "TOF19092511",
+  "messageType": "welcome",
+  "contentHash": "5e51815157495c67",
+  "timestamp": 1758378626380,
+  "success": false,
+  "errorMessage": "Messages not allowed outside business hours (9 AM - 8 PM)",
+  "sent": false
+}

@@ -2890,3 +2890,24 @@ TypeError: this.isKillSwitchActive is not a function
     at EnhancedSafetyManager.getSafetyStatus (C:\Users\gssai\OneDrive\Desktop\Whatsapp-Moblie-Bot\enhanced-safety-manager.js:1215:44)
     at EnhancedWhatsAppClient.isHealthy (C:\Users\gssai\OneDrive\Desktop\Whatsapp-Moblie-Bot\enhanced-whatsapp-client.js:551:55)
     at WhatsAppSheetBot.start (C:\Users\gssai\OneDrive\Desktop\Whatsapp-Moblie-Bot\worker.js:1104:38)
+2025-09-20T11:25:52: ⚠️ Warning: Could not remove lock file: EPERM: operation not permitted, unlink 'C:\Users\gssai\OneDrive\Desktop\Whatsapp-Moblie-Bot\safety-data\process.lock'
+2025-09-20T12:53:08: ⚠️ Warning: Could not remove lock file: EPERM: operation not permitted, unlink 'C:\Users\gssai\OneDrive\Desktop\Whatsapp-Moblie-Bot\safety-data\process.lock'
+2025-09-20T13:24:54: ⚠️ Warning: Could not remove lock file: EPERM: operation not permitted, unlink 'C:\Users\gssai\OneDrive\Desktop\Whatsapp-Moblie-Bot\safety-data\process.lock'
+2025-09-20T13:28:25: ⚠️ Warning: Could not remove lock file: EPERM: operation not permitted, unlink 'C:\Users\gssai\OneDrive\Desktop\Whatsapp-Moblie-Bot\safety-data\process.lock'
+2025-09-20T13:30:55: ❌ Error syncing to files: ENOENT: no such file or directory, open 'C:\Users\gssai\OneDrive\Desktop\Whatsapp-Moblie-Bot\duplicate-prevention-data\customer-history.json'
+2025-09-20T13:31:25: ❌ Error syncing to files: ENOENT: no such file or directory, open 'C:\Users\gssai\OneDrive\Desktop\Whatsapp-Moblie-Bot\duplicate-prevention-data\message-hashes.json'
+2025-09-20T13:31:55: ❌ Error syncing to files: ENOENT: no such file or directory, open 'C:\Users\gssai\OneDrive\Desktop\Whatsapp-Moblie-Bot\duplicate-prevention-data\sent-messages.json'
+2025-09-20T13:32:25: ❌ Failed to write log: ENOENT: no such file or directory, open 'C:\Users\gssai\OneDrive\Desktop\Whatsapp-Moblie-Bot\safety-data\logs\bot-2025-09-20T07-58-25-340Z.log'
+2025-09-20T13:32:25: ❌ Failed to write log: ENOENT: no such file or directory, open 'C:\Users\gssai\OneDrive\Desktop\Whatsapp-Moblie-Bot\safety-data\logs\bot-2025-09-20T07-58-25-340Z.log'
+2025-09-20T13:32:25: ❌ Error syncing to files: ENOENT: no such file or directory, open 'C:\Users\gssai\OneDrive\Desktop\Whatsapp-Moblie-Bot\duplicate-prevention-data\customer-history.json'
+2025-09-20T13:32:55: ❌ Error syncing to files: ENOENT: no such file or directory, open 'C:\Users\gssai\OneDrive\Desktop\Whatsapp-Moblie-Bot\duplicate-prevention-data\statistics.json'
+2025-09-20T13:41:24: Failed to get sheet data from Main Orders: Unable to parse range: Main Orders!A:Z
+2025-09-20T13:41:25: Failed to get sheet data from Combined Orders: Unable to parse range: Combined Orders!A:Z
+2025-09-20T13:44:24: Failed to get sheet data from Main Orders: Unable to parse range: Main Orders!A:Z
+2025-09-20T13:44:25: Failed to get sheet data from Combined Orders: Unable to parse range: Combined Orders!A:Z
+2025-09-20T13:44:59: ⚠️ Warning: Could not remove lock file: EPERM: operation not permitted, unlink 'C:\Users\gssai\OneDrive\Desktop\Whatsapp-Moblie-Bot\safety-data\process.lock'
+2025-09-20T13:45:06: Failed to get sheet data from Main Orders: Unable to parse range: Sheet1!A:Z
+2025-09-20T13:45:06: Failed to get sheet data from Fabric Orders: Unable to parse range: Sheet1!A:Z
+2025-09-20T13:45:07: Failed to get sheet data from Combined Orders: Unable to parse range: Sheet1!A:Z
+2025-09-20T15:05:22: ⚠️ Warning: Could not remove lock file: EPERM: operation not permitted, unlink 'C:\Users\gssai\OneDrive\Desktop\Whatsapp-Moblie-Bot\safety-data\process.lock'
+2025-09-20T15:10:30: ⚠️ Warning: Could not remove lock file: EPERM: operation not permitted, unlink 'C:\Users\gssai\OneDrive\Desktop\Whatsapp-Moblie-Bot\safety-data\process.lock'

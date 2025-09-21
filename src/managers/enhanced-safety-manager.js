@@ -19,12 +19,22 @@ const DeveloperConfig = require('../config/developer-config');
  * - Detailed logging and monitoring
  */
 class EnhancedSafetyManager {
+    static instance = null;
     constructor(options = {}) {
+        // Prevent multiple instances
+        if (EnhancedSafetyManager.instance) {
+            console.log('⚠️ Enhanced Safety Manager already initialized, returning existing instance');
+            return EnhancedSafetyManager.instance;
+        }
+        
         this.dataDir = options.dataDir || path.join(__dirname, '../../data/safety-data');
         this.startupTime = Date.now();
         this.isStartupGracePeriod = true;
         this.gracePeriodMs = options.gracePeriodMs || 240000; // 4 minutes
         this.killSwitchActive = false;
+        
+        // Set singleton instance
+        EnhancedSafetyManager.instance = this;
         this.dbPath = path.join(this.dataDir, 'safety-database.db');
         
         // Circuit breaker limits
@@ -1299,6 +1309,10 @@ class EnhancedSafetyManager {
         } catch (error) {
             console.error('❌ Safety Manager shutdown error:', error.message);
         }
+    }
+    
+    static reset() {
+        EnhancedSafetyManager.instance = null;
     }
 }
 

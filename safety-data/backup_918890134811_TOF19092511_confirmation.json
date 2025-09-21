@@ -1,0 +1,10 @@
+{
+  "phone": "918890134811",
+  "orderId": "TOF19092511",
+  "messageType": "confirmation",
+  "contentHash": "388fbe812e19f1de",
+  "timestamp": 1758377704702,
+  "success": false,
+  "errorMessage": "Welcome message must be sent before confirmation for order TOF19092511",
+  "sent": false
+}

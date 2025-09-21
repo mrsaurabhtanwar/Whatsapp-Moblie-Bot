@@ -28,7 +28,54 @@ class WhatsAppClient extends EventEmitter {
         this.isConnected = false;
         this.connectionState = 'disconnected';
         this.qrCode = null;
-        this.authDir = options.authDir || path.join(__dirname, 'baileys_auth');
+        // Determine Baileys auth directory (prefer env/.session-lock if provided)
+        const defaultAuthDir = path.join(__dirname, 'baileys_auth');
+        let resolvedAuthDir = options.authDir || defaultAuthDir;
+        try {
+            const tryPaths = [];
+            if (process.env.BAILEYS_AUTH_PATH) {
+                const envPath = process.env.BAILEYS_AUTH_PATH;
+                // Resolve relative to CWD if not absolute
+                const absEnvPath = path.isAbsolute(envPath) ? envPath : path.resolve(process.cwd(), envPath);
+                tryPaths.push(absEnvPath);
+            }
+            // .session-lock.json support
+            const lockFile = path.resolve(process.cwd(), '.session-lock.json');
+            if (fs.existsSync(lockFile)) {
+                try {
+                    const raw = fs.readFileSync(lockFile, 'utf8');
+                    const lock = JSON.parse(raw);
+                    if (lock && lock.authPath) {
+                        const lockAuthPath = path.isAbsolute(lock.authPath) ? lock.authPath : path.resolve(process.cwd(), lock.authPath);
+                        tryPaths.push(lockAuthPath);
+                    }
+                } catch (e) {
+                    console.log('ℹ️ Failed to read .session-lock.json:', e?.message || e);
+                }
+            }
+            // Always include default at end as fallback
+            tryPaths.push(defaultAuthDir);
+
+            // Pick the first path that exists and has creds.json
+            for (const p of tryPaths) {
+                try {
+                    const creds = path.join(p, 'creds.json');
+                    if (fs.existsSync(p) && fs.existsSync(creds)) {
+                        resolvedAuthDir = p;
+                        break;
+                    }
+                } catch {
+                    // ignore env path errors
+                }
+            }
+        } catch {
+            // ignore auth dir resolution errors
+        }
+        this.authDir = resolvedAuthDir;
+        // Reentrancy/connection guards
+        this.isInitializing = false;
+        this.reconnectTimer = null;
+        this.manualDisconnect = false;
         
         // Logger configuration
         const logLevel = options.logLevel || this.authConfig.get('logLevel');
@@ -63,9 +110,11 @@ class WhatsAppClient extends EventEmitter {
     }
 
     setupSessionValidation() {
-        // Periodically check session validity
+        // Periodically check session validity - but only if connected
         setInterval(() => {
-            this.validateSession();
+            if (this.isConnected && this.socket) {
+                this.validateSession();
+            }
         }, this.sessionCheckInterval);
         
         console.log(`🔒 Session validation enabled (check every ${this.sessionCheckInterval/1000}s)`);
@@ -78,9 +127,9 @@ class WhatsAppClient extends EventEmitter {
                 return false;
             }
 
-            // Check if we can still send messages (basic connectivity test)
-            const isValid = await this.isHealthy();
-            this.sessionValid = isValid.connected && isValid.socket;
+            // Basic connectivity test - just check if socket exists and is connected
+            // Don't make aggressive API calls that might cause disconnections
+            this.sessionValid = this.isConnected && !!this.socket;
             this.lastSessionCheck = new Date();
             
             if (!this.sessionValid) {
@@ -96,6 +145,16 @@ class WhatsAppClient extends EventEmitter {
     }
 
     async initialize() {
+        // Prevent re-entrancy and duplicate connections
+        if (this.isInitializing) {
+            console.log('⏭️ Initialize already in progress, skipping');
+            return this.socket;
+        }
+        if (this.isConnected || this.connectionState === 'connecting') {
+            console.log('✅ Already connected or connecting, skipping initialize');
+            return this.socket;
+        }
+        this.isInitializing = true;
         try {
             console.log('🔄 Initializing WhatsApp client...');
             
@@ -112,7 +171,7 @@ class WhatsAppClient extends EventEmitter {
                 generateHighQualityLinkPreview: true,
                 syncFullHistory: false,
                 markOnlineOnConnect: false,
-                getMessage: async (key) => {
+                getMessage: async (_key) => {
                     return { conversation: '' };
                 }
             });
@@ -123,6 +182,8 @@ class WhatsAppClient extends EventEmitter {
         } catch (error) {
             console.error('❌ Failed to initialize WhatsApp client:', error.message);
             throw error;
+        } finally {
+            this.isInitializing = false;
         }
     }
 
@@ -158,7 +219,7 @@ class WhatsAppClient extends EventEmitter {
                     console.log('   2. Select "Phone Number Authentication"');
                     console.log('   3. Enter your phone number');
                     console.log('   4. Get the pairing code and enter it in WhatsApp');
-                } catch (pairingError) {
+                } catch {
                     console.log('🔄 Using QR code authentication instead');
                 }
             }
@@ -171,13 +232,36 @@ class WhatsAppClient extends EventEmitter {
                 this.isConnected = false;
                 this.connectionState = 'disconnected';
                 this.sessionValid = false;
+                // Ensure socket reference is cleared to avoid reuse of a stale instance
+                this.socket = null;
                 this.emit('disconnected');
                 
+                // If user explicitly requested disconnect/restart, don't auto-reconnect here
+                if (this.manualDisconnect) {
+                    console.log('🛑 Manual disconnect; suppressing auto-reconnect');
+                    this.reconnectAttempts = 0;
+                    return;
+                }
+
+                // Clear any pending reconnect timers before scheduling a new one
+                if (this.reconnectTimer) {
+                    clearTimeout(this.reconnectTimer);
+                    this.reconnectTimer = null;
+                }
+
                 if (shouldReconnect && this.reconnectAttempts < this.maxReconnectAttempts) {
                     this.reconnectAttempts++;
                     const retryDelay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 30000); // Exponential backoff, max 30s
                     console.log(`🔄 Reconnecting in ${retryDelay/1000}s... (Attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-                    setTimeout(() => this.initialize(), retryDelay);
+                    this.reconnectTimer = setTimeout(() => {
+                        this.reconnectTimer = null;
+                        // Avoid reconnect if already connecting/connected
+                        if (this.isConnected || this.connectionState === 'connecting') {
+                            console.log('✅ Already connecting/connected. Skipping scheduled reconnect');
+                            return;
+                        }
+                        this.initialize();
+                    }, retryDelay);
                 } else if (disconnectReason === DisconnectReason.loggedOut) {
                     console.log('📱 Logged out. Authentication required again.');
                     // Don't auto-clear auth immediately, let user decide
@@ -186,7 +270,18 @@ class WhatsAppClient extends EventEmitter {
                 } else if (disconnectReason === DisconnectReason.restartRequired) {
                     console.log('🔄 WhatsApp server requires restart. Attempting reconnection...');
                     this.reconnectAttempts = 0; // Reset for restart scenarios
-                    setTimeout(() => this.initialize(), 5000);
+                    if (this.reconnectTimer) {
+                        clearTimeout(this.reconnectTimer);
+                        this.reconnectTimer = null;
+                    }
+                    this.reconnectTimer = setTimeout(() => {
+                        this.reconnectTimer = null;
+                        if (this.isConnected || this.connectionState === 'connecting') {
+                            console.log('✅ Already connecting/connected. Skipping scheduled restart reconnect');
+                            return;
+                        }
+                        this.initialize();
+                    }, 5000);
                 } else {
                     console.log('❌ Max reconnection attempts reached. Please restart the bot or check your internet connection.');
                     console.log('💡 You can visit http://localhost:3001 to see the status and authenticate again.');
@@ -207,6 +302,11 @@ class WhatsAppClient extends EventEmitter {
                 // Log session info for debugging
                 console.log('📱 Session established successfully');
                 console.log('🔒 Session will be monitored for stability');
+                // Clear any pending reconnect timers
+                if (this.reconnectTimer) {
+                    clearTimeout(this.reconnectTimer);
+                    this.reconnectTimer = null;
+                }
             } else if (connection === 'connecting') {
                 console.log('🔄 Connecting to WhatsApp...');
                 this.connectionState = 'connecting';
@@ -229,6 +329,13 @@ class WhatsAppClient extends EventEmitter {
     }
 
     async sendMessage(jid, message) {
+        // Mock mode: don't actually send messages
+        if (process.env.MOCK_WHATSAPP === 'true') {
+            const mockId = `mock-${Date.now()}`;
+            console.log(`🤖 [MOCK] Would send to ${jid}: ${message.substring(0, 80)}${message.length > 80 ? '...' : ''}`);
+            return { key: { id: mockId }, mock: true };
+        }
+
         if (!this.isConnected || !this.socket) {
             throw new Error('WhatsApp not connected');
         }
@@ -372,7 +479,7 @@ class WhatsAppClient extends EventEmitter {
         };
     }
 
-    async verifyPairingCode(code) {
+    async verifyPairingCode(_code) {
         try {
             const authStatus = this.getAuthStatus();
             
@@ -417,12 +524,36 @@ class WhatsAppClient extends EventEmitter {
 
 
     async disconnect() {
-        if (this.socket) {
-            await this.socket.logout();
-            this.socket = null;
-            this.isConnected = false;
-            this.connectionState = 'disconnected';
-            console.log('🔌 WhatsApp client disconnected');
+        // Prevent auto-reconnect during an intentional disconnect/restart
+        this.manualDisconnect = true;
+        try {
+            if (this.reconnectTimer) {
+                clearTimeout(this.reconnectTimer);
+                this.reconnectTimer = null;
+            }
+            if (this.socket) {
+                // Prefer closing the socket without logging out to preserve session
+                if (typeof this.socket.end === 'function') {
+                    try {
+                        await this.socket.end(new Error('manual disconnect'));
+                    } catch (e) {
+                        console.log('ℹ️ Socket end error ignored:', e?.message || e);
+                    }
+                } else if (this.socket.ws && typeof this.socket.ws.close === 'function') {
+                    try {
+                        this.socket.ws.close();
+                    } catch (e) {
+                        console.log('ℹ️ Socket close error ignored:', e?.message || e);
+                    }
+                }
+                this.socket = null;
+                this.isConnected = false;
+                this.connectionState = 'disconnected';
+                console.log('🔌 WhatsApp client disconnected (session preserved)');
+            }
+        } finally {
+            // Allow future reconnects
+            this.manualDisconnect = false;
         }
     }
 

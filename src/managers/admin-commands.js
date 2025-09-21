@@ -15,7 +15,7 @@ class AdminCommands {
         this.botMode = process.env.BOT_MODE || 'AUTO';
         this.pendingApprovals = new Map(); // orderId -> approval data
         
-        // Message handlers are set up in main-bot.js, not here
+        // Message handlers are set up in the main bot instance
     }
 
     async handleIncomingMessage(messageData) {
@@ -193,8 +193,20 @@ class AdminCommands {
 
     async handleStatusCommand() {
         try {
-            const whatsappHealth = this.whatsapp.isHealthy();
-            const sheetsHealth = await this.sheets.healthCheck();
+            const whatsappHealth = await this.whatsapp.isHealthy();
+            
+            // Check sheets health if available
+            let sheetsHealth = { status: 'unknown', error: 'Not available' };
+            try {
+                if (this.sheets && typeof this.sheets.healthCheck === 'function') {
+                    sheetsHealth = await this.sheets.healthCheck();
+                } else if (this.sheets && typeof this.sheets.isHealthy === 'function') {
+                    const health = this.sheets.isHealthy();
+                    sheetsHealth = { status: health.connected ? 'healthy' : 'error', error: health.error || 'Unknown' };
+                }
+            } catch (sheetsError) {
+                sheetsHealth = { status: 'error', error: sheetsError.message };
+            }
             
             let queueStats = { active: 0, waiting: 0, completed: 0, failed: 0 };
             try {
@@ -257,6 +269,7 @@ Pending Approvals: ${this.pendingApprovals.size}`;
 🛠️ Maintenance Commands:
 • BACKUP - Create data backup
 • CLEANUP - Clean old data and logs
+
 
 📝 Examples:
 • APPROVE #12345
@@ -716,8 +729,20 @@ Time: ${new Date().toLocaleString()}`);
 
     async handleStatsCommand() {
         try {
-            const whatsappHealth = this.whatsapp.isHealthy();
-            const sheetsHealth = await this.sheets.healthCheck();
+            const whatsappHealth = await this.whatsapp.isHealthy();
+            
+            // Check sheets health if available
+            let sheetsHealth = { status: 'unknown', error: 'Not available' };
+            try {
+                if (this.sheets && typeof this.sheets.healthCheck === 'function') {
+                    sheetsHealth = await this.sheets.healthCheck();
+                } else if (this.sheets && typeof this.sheets.isHealthy === 'function') {
+                    const health = this.sheets.isHealthy();
+                    sheetsHealth = { status: health.connected ? 'healthy' : 'error', error: health.error || 'Unknown' };
+                }
+            } catch (sheetsError) {
+                sheetsHealth = { status: 'error', error: sheetsError.message };
+            }
             
             // Get detailed statistics
             let statsMessage = `📊 DETAILED STATISTICS
@@ -753,7 +778,7 @@ ${sheetsHealth.error ? `• Error: ${sheetsHealth.error}` : ''}
             const startTime = Date.now();
             
             // Test WhatsApp connection
-            const whatsappHealth = this.whatsapp.isHealthy();
+            const whatsappHealth = await this.whatsapp.isHealthy();
             const responseTime = Date.now() - startTime;
             
             const pingMessage = `🏓 PONG!
@@ -886,6 +911,7 @@ Time: ${new Date().toLocaleString()}`);
             await this.sendToAdmin(`❌ Error during cleanup: ${error.message}`);
         }
     }
+
 }
 
 module.exports = AdminCommands;
