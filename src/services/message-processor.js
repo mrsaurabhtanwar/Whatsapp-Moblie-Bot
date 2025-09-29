@@ -249,7 +249,7 @@ class MessageProcessor {
         const defaults = {
             shop_name: process.env.SHOP_NAME || 'RS Tailor & Fabric',
             shop_phone: process.env.SHOP_PHONE || '8824781960',
-            business_hours: process.env.BUSINESS_HOURS || '10:00 AM - 8:00 PM',
+            business_hours: process.env.BUSINESS_HOURS || '24/7 - No Time Restrictions',
             customer_name: orderData.customer_name || 'Customer',
             order_id: orderData.order_id || 'N/A',
             garment_type: orderData.garment_type || 'Item',

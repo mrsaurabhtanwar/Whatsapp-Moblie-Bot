@@ -48,6 +48,57 @@ class WhatsAppTailorBot {
         // Setup graceful shutdown
         this.setupGracefulShutdown();
     }
+
+    // Festival Campaign Duplicate Prevention System
+    getFestivalCampaignFilePath() {
+        return path.join(__dirname, '..', 'data', 'duplicate-prevention', 'festival-campaigns.json');
+    }
+
+    loadFestivalCampaignHistory() {
+        try {
+            const filePath = this.getFestivalCampaignFilePath();
+            if (fs.existsSync(filePath)) {
+                const data = fs.readFileSync(filePath, 'utf8');
+                return JSON.parse(data) || {};
+            }
+        } catch (error) {
+            logger.warn('Failed to load festival campaign history:', error.message);
+        }
+        return {};
+    }
+
+    saveFestivalCampaignHistory(history) {
+        try {
+            const filePath = this.getFestivalCampaignFilePath();
+            const dir = path.dirname(filePath);
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+            fs.writeFileSync(filePath, JSON.stringify(history, null, 2));
+        } catch (error) {
+            logger.error('Failed to save festival campaign history:', error.message);
+        }
+    }
+
+    hasSentFestivalMessage(phone, campaignType = 'dussehra-2025') {
+        const history = this.loadFestivalCampaignHistory();
+        return history[phone] && history[phone].some(entry => 
+            typeof entry === 'string' && entry.startsWith(campaignType)
+        );
+    }
+
+    recordFestivalMessage(phone, campaignType = 'dussehra-2025') {
+        const history = this.loadFestivalCampaignHistory();
+        if (!history[phone]) {
+            history[phone] = [];
+        }
+        const campaignEntry = `${campaignType}-${new Date().toISOString()}`;
+        if (!this.hasSentFestivalMessage(phone, campaignType)) {
+            history[phone].push(campaignEntry);
+            this.saveFestivalCampaignHistory(history);
+            logger.info(`📝 Recorded festival message: ${phone} - ${campaignType}`);
+        }
+    }
     
     /**
      * Load and validate configuration
@@ -79,7 +130,7 @@ class WhatsAppTailorBot {
             // Shop Information
             shopName: process.env.SHOP_NAME,
             shopPhone: process.env.SHOP_PHONE,
-            businessHours: process.env.BUSINESS_HOURS || '10:00 AM - 8:00 PM',
+            businessHours: process.env.BUSINESS_HOURS || '24/7 - No Time Restrictions',
             
             // Bot Configuration
             botMode: process.env.BOT_MODE || 'AUTO',
@@ -104,8 +155,21 @@ class WhatsAppTailorBot {
      * Setup Express application with middleware and routes
      */
     setupExpressApp() {
-        // Basic middleware
-        this.app.use(helmet());
+        // Basic middleware with CSP configuration for campaign interface
+        this.app.use(helmet({
+            contentSecurityPolicy: {
+                directives: {
+                    defaultSrc: ["'self'"],
+                    scriptSrc: ["'self'", "'unsafe-inline'"],
+                    styleSrc: ["'self'", "'unsafe-inline'"],
+                    imgSrc: ["'self'", "data:", "https:"],
+                    fontSrc: ["'self'"],
+                    objectSrc: ["'none'"],
+                    mediaSrc: ["'self'"],
+                    frameSrc: ["'none'"],
+                },
+            },
+        }));
         this.app.use(cors());
         this.app.use(express.json({ limit: '10mb' }));
         this.app.use(express.urlencoded({ extended: true }));
@@ -483,12 +547,548 @@ class WhatsAppTailorBot {
             }
         });
 
+        // Manual Approval Dussehra Campaign endpoint
+        this.app.post('/api/manual-dussehra-campaign', async (req, res) => {
+            try {
+                logger.info('🎯 Manual approval Dussehra campaign request received');
+                
+                const { csvData } = req.body;
+                
+                if (!csvData || !Array.isArray(csvData)) {
+                    return res.status(400).json({
+                        error: 'Invalid CSV data',
+                        example: {
+                            csvData: [
+                                { name: 'Saurabh', phone: '7375938371' },
+                                { name: 'Deepak', phone: '6375623182' }
+                            ]
+                        },
+                        timestamp: new Date().toISOString()
+                    });
+                }
+                
+                // Store campaign data globally for manual processing
+                global.manualCampaignData = {
+                    customers: csvData,
+                    currentIndex: 0,
+                    processedNumbers: new Set(),
+                    results: { success: 0, failed: 0, skipped: 0 }
+                };
+                
+                res.json({
+                    success: true,
+                    message: 'Manual campaign initialized',
+                    totalCustomers: csvData.length,
+                    nextAction: 'Use /api/next-manual-message to process each message with approval',
+                    timestamp: new Date().toISOString()
+                });
+                
+            } catch (error) {
+                logger.error('❌ Manual campaign init failed:', error);
+                res.status(500).json({
+                    error: 'Manual campaign init failed',
+                    details: error.message,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        });
+
+        // Get next message for manual approval
+        this.app.post('/api/next-manual-message', async (req, res) => {
+            try {
+                if (!global.manualCampaignData) {
+                    return res.status(400).json({
+                        error: 'No manual campaign in progress',
+                        action: 'Start a campaign first with /api/manual-dussehra-campaign',
+                        timestamp: new Date().toISOString()
+                    });
+                }
+                
+                const campaign = global.manualCampaignData;
+                
+                if (campaign.currentIndex >= campaign.customers.length) {
+                    return res.json({
+                        completed: true,
+                        message: 'Campaign completed!',
+                        results: campaign.results,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+                
+                // Get current customer
+                const currentCustomer = campaign.customers[campaign.currentIndex];
+                const name = currentCustomer.name || currentCustomer.Name || `Customer ${campaign.currentIndex + 1}`;
+                const phone = currentCustomer.phone || currentCustomer.number || currentCustomer.Number;
+                
+                // Validate phone number
+                const validatePhoneNumber = (number) => {
+                    if (!number) return false;
+                    const cleanNumber = number.toString().replace(/[\s\-\(\)\+]/g, '');
+                    const patterns = [
+                        /^[6789]\d{9}$/, /^91[6789]\d{9}$/, /^0[6789]\d{9}$/
+                    ];
+                    return patterns.some(pattern => pattern.test(cleanNumber));
+                };
+                
+                const normalizePhoneNumber = (number) => {
+                    if (!number) return null;
+                    let cleanNumber = number.toString().replace(/[\s\-\(\)\+]/g, '');
+                    if (cleanNumber.startsWith('0')) cleanNumber = cleanNumber.substring(1);
+                    if (cleanNumber.length === 10) cleanNumber = '91' + cleanNumber;
+                    return cleanNumber;
+                };
+                
+                // Check validation
+                if (!phone) {
+                    campaign.currentIndex++;
+                    campaign.results.skipped++;
+                    return res.json({
+                        skipped: true,
+                        reason: 'Missing phone number',
+                        customer: { name, phone },
+                        progress: `${campaign.currentIndex}/${campaign.customers.length}`,
+                        nextAction: 'Call /api/next-manual-message again',
+                        timestamp: new Date().toISOString()
+                    });
+                }
+                
+                if (!validatePhoneNumber(phone)) {
+                    campaign.currentIndex++;
+                    campaign.results.skipped++;
+                    return res.json({
+                        skipped: true,
+                        reason: 'Invalid phone number format',
+                        customer: { name, phone },
+                        progress: `${campaign.currentIndex}/${campaign.customers.length}`,
+                        nextAction: 'Call /api/next-manual-message again',
+                        timestamp: new Date().toISOString()
+                    });
+                }
+                
+                const normalizedPhone = normalizePhoneNumber(phone);
+                
+                // Check for duplicates within current campaign
+                if (campaign.processedNumbers.has(normalizedPhone)) {
+                    campaign.currentIndex++;
+                    campaign.results.skipped++;
+                    return res.json({
+                        skipped: true,
+                        reason: 'Duplicate phone number in current campaign',
+                        customer: { name, phone: normalizedPhone },
+                        progress: `${campaign.currentIndex}/${campaign.customers.length}`,
+                        nextAction: 'Call /api/next-manual-message again',
+                        timestamp: new Date().toISOString()
+                    });
+                }
+
+                // Check if festival message already sent to this number (persistent check)
+                if (this.hasSentFestivalMessage(normalizedPhone, 'dussehra-2025')) {
+                    campaign.currentIndex++;
+                    campaign.results.skipped++;
+                    return res.json({
+                        skipped: true,
+                        reason: 'Festival message already sent to this number previously',
+                        customer: { name, phone: normalizedPhone },
+                        progress: `${campaign.currentIndex}/${campaign.customers.length}`,
+                        nextAction: 'Call /api/next-manual-message again',
+                        timestamp: new Date().toISOString()
+                    });
+                }
+                
+                // Generate preview message
+                const festivalMessage = `🙏 *नमस्ते ${name} जी* 🙏
+
+🌺 *दुर्गा पूजा और दशहरा की हार्दिक शुभकामनाएं* 🌺
+
+इस पावन अवसर पर हम आपके और आपके पूरे परिवार की अच्छी सेहत और खुशहाली की प्रार्थना करते हैं। माँ दुर्गा आप सभी पर अपनी कृपा बनाए रखें। 🙏✨
+
+🎉 *इस दशहरे को बनाइए खास हमारे बेहतरीन ऑफर के साथ!* 🎉
+
+आप हमारे नियमित और प्रिय ग्राहक हैं, इसलिए आपके लिए विशेष *25% की छूट*:
+
+💰 *विशेष ऑफर:*
+▪️ ₹1000 की खरीदारी पर सीधे ₹250 की छूट 
+▪️ ₹2000 की खरीदारी पर सीधे ₹500 की छूट
+▪️ कोई छुपी हुई शर्तें नहीं, सीधी सादी छूट!
+
+📅 *ऑफर की अवधि:*
+30 सितंबर से 2 अक्टूबर तक (केवल 3 दिन)
+आप इस दौरान कभी भी आ सकते हैं।
+
+🎯 *यह ऑफर केवल आपके लिए उपलब्ध रहेगा!*
+
+📍 *RS Tailor & Fabric*
+Main Market, Kumher
+📞 *संपर्क:* 8824781960
+⏰ *समय:* सुबह 10 से रात 8 बजे
+
+जय माता दी! 🚩
+धन्यवाद! 🙏`;
+
+                res.json({
+                    needsApproval: true,
+                    customer: { name, phone: normalizedPhone, originalPhone: phone },
+                    messagePreview: festivalMessage,
+                    progress: `${campaign.currentIndex + 1}/${campaign.customers.length}`,
+                    actions: {
+                        approve: 'POST /api/approve-manual-message',
+                        reject: 'POST /api/reject-manual-message',
+                        skip: 'POST /api/skip-manual-message'
+                    },
+                    timestamp: new Date().toISOString()
+                });
+                
+            } catch (error) {
+                logger.error('❌ Get next manual message failed:', error);
+                res.status(500).json({
+                    error: 'Get next manual message failed',
+                    details: error.message,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        });
+
+        // Approve and send manual message
+        this.app.post('/api/approve-manual-message', async (req, res) => {
+            try {
+                if (!global.manualCampaignData) {
+                    return res.status(400).json({
+                        error: 'No manual campaign in progress',
+                        timestamp: new Date().toISOString()
+                    });
+                }
+                
+                const campaign = global.manualCampaignData;
+                const currentCustomer = campaign.customers[campaign.currentIndex];
+                const name = currentCustomer.name || currentCustomer.Name || `Customer ${campaign.currentIndex + 1}`;
+                const phone = currentCustomer.phone || currentCustomer.number || currentCustomer.Number;
+                
+                const normalizePhoneNumber = (number) => {
+                    if (!number) return null;
+                    let cleanNumber = number.toString().replace(/[\s\-\(\)\+]/g, '');
+                    if (cleanNumber.startsWith('0')) cleanNumber = cleanNumber.substring(1);
+                    if (cleanNumber.length === 10) cleanNumber = '91' + cleanNumber;
+                    return cleanNumber;
+                };
+                
+                const normalizedPhone = normalizePhoneNumber(phone);
+                campaign.processedNumbers.add(normalizedPhone);
+                
+                // Generate message
+                const festivalMessage = `🙏 *नमस्ते ${name} जी* 🙏
+
+🌺 *दुर्गा पूजा और दशहरा की हार्दिक शुभकामनाएं* 🌺
+
+इस पावन अवसर पर हम आपके और आपके पूरे परिवार की अच्छी सेहत और खुशहाली की प्रार्थना करते हैं। माँ दुर्गा आप सभी पर अपनी कृपा बनाए रखें। 🙏✨
+
+🎉 *इस दशहरे को बनाइए खास हमारे बेहतरीन ऑफर के साथ!* 🎉
+
+आप हमारे नियमित और प्रिय ग्राहक हैं, इसलिए आपके लिए विशेष *25% की छूट*:
+
+💰 *विशेष ऑफर:*
+▪️ ₹1000 की खरीदारी पर सीधे ₹250 की छूट 
+▪️ ₹2000 की खरीदारी पर सीधे ₹500 की छूट
+▪️ कोई छुपी हुई शर्तें नहीं, सीधी सादी छूट!
+
+📅 *ऑफर की अवधि:*
+30 सितंबर से 2 अक्टूबर तक (केवल 3 दिन)
+आप इस दौरान कभी भी आ सकते हैं।
+
+🎯 *यह ऑफर केवल आपके लिए उपलब्ध रहेगा!*
+
+📍 *RS Tailor & Fabric*
+Main Market, Kumher
+📞 *संपर्क:* 8824781960
+⏰ *समय:* सुबह 10 से रात 8 बजे
+
+जय माता दी! 🚩
+धन्यवाद! 🙏`;
+                
+                // Send message
+                const result = await this.whatsappClient.sendVideoMessage(
+                    normalizedPhone,
+                    './media/videos/festival-promo.mp4',
+                    festivalMessage
+                );
+                
+                campaign.currentIndex++;
+                
+                if (result && result.success !== false) {
+                    campaign.results.success++;
+                    
+                    // Record festival message in persistent storage to prevent duplicates
+                    this.recordFestivalMessage(normalizedPhone, 'dussehra-2025');
+                    
+                    res.json({
+                        success: true,
+                        message: `Festival message sent to ${name}`,
+                        customer: { name, phone: normalizedPhone },
+                        progress: `${campaign.currentIndex}/${campaign.customers.length}`,
+                        nextAction: 'Call /api/next-manual-message for next customer',
+                        timestamp: new Date().toISOString()
+                    });
+                } else {
+                    campaign.results.failed++;
+                    res.json({
+                        success: false,
+                        message: `Failed to send message to ${name}`,
+                        customer: { name, phone: normalizedPhone },
+                        progress: `${campaign.currentIndex}/${campaign.customers.length}`,
+                        nextAction: 'Call /api/next-manual-message for next customer',
+                        timestamp: new Date().toISOString()
+                    });
+                }
+                
+            } catch (error) {
+                logger.error('❌ Approve manual message failed:', error);
+                res.status(500).json({
+                    error: 'Approve manual message failed',
+                    details: error.message,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        });
+
+        // Reject manual message (skip current customer)
+        this.app.post('/api/reject-manual-message', async (req, res) => {
+            try {
+                if (!global.manualCampaignData) {
+                    return res.status(400).json({
+                        error: 'No manual campaign in progress',
+                        timestamp: new Date().toISOString()
+                    });
+                }
+                
+                const campaign = global.manualCampaignData;
+                const currentCustomer = campaign.customers[campaign.currentIndex];
+                const name = currentCustomer.name || currentCustomer.Name || `Customer ${campaign.currentIndex + 1}`;
+                
+                campaign.currentIndex++;
+                campaign.results.skipped++;
+                
+                res.json({
+                    rejected: true,
+                    message: `Message rejected for ${name}`,
+                    progress: `${campaign.currentIndex}/${campaign.customers.length}`,
+                    nextAction: 'Call /api/next-manual-message for next customer',
+                    timestamp: new Date().toISOString()
+                });
+                
+            } catch (error) {
+                logger.error('❌ Reject manual message failed:', error);
+                res.status(500).json({
+                    error: 'Reject manual message failed',
+                    details: error.message,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        });
+
+        // Bulk Dussehra Campaign endpoint (Auto mode)
+        this.app.post('/api/bulk-dussehra-campaign', async (req, res) => {
+            try {
+                logger.info('🎉 Bulk Dussehra campaign request received');
+                
+                const { csvData, delayMs = 5000 } = req.body;
+                
+                if (!csvData || !Array.isArray(csvData)) {
+                    return res.status(400).json({
+                        error: 'Invalid CSV data',
+                        example: {
+                            csvData: [
+                                { name: 'Saurabh', phone: '7375938371' },
+                                { name: 'Deepak', phone: '6375623182' }
+                            ],
+                            delayMs: 5000
+                        },
+                        timestamp: new Date().toISOString()
+                    });
+                }
+                
+                // Validation functions
+                const validatePhoneNumber = (number) => {
+                    if (!number) return false;
+                    const cleanNumber = number.toString().replace(/[\s\-\(\)\+]/g, '');
+                    const patterns = [
+                        /^[6789]\d{9}$/, // 10 digit starting with 6,7,8,9
+                        /^91[6789]\d{9}$/, // With country code 91
+                        /^0[6789]\d{9}$/ // With leading 0
+                    ];
+                    return patterns.some(pattern => pattern.test(cleanNumber));
+                };
+                
+                const normalizePhoneNumber = (number) => {
+                    if (!number) return null;
+                    let cleanNumber = number.toString().replace(/[\s\-\(\)\+]/g, '');
+                    if (cleanNumber.startsWith('0')) {
+                        cleanNumber = cleanNumber.substring(1);
+                    }
+                    if (cleanNumber.length === 10) {
+                        cleanNumber = '91' + cleanNumber;
+                    }
+                    return cleanNumber;
+                };
+                
+                // Process CSV data with validation
+                const processedCustomers = [];
+                const processedNumbers = new Set();
+                
+                csvData.forEach((row, index) => {
+                    const name = row.name || row.Name || `Customer ${index + 1}`;
+                    const phone = row.phone || row.number || row.Number;
+                    
+                    if (!phone) {
+                        console.log(`⚠️ Row ${index + 1}: No phone number for ${name}`);
+                        return;
+                    }
+                    
+                    if (!validatePhoneNumber(phone)) {
+                        console.log(`❌ Row ${index + 1}: Invalid phone number ${phone}`);
+                        return;
+                    }
+                    
+                    const normalizedPhone = normalizePhoneNumber(phone);
+                    
+                    if (processedNumbers.has(normalizedPhone)) {
+                        console.log(`🔄 Row ${index + 1}: Duplicate number ${phone}`);
+                        return;
+                    }
+
+                    // Check if festival message already sent to this number
+                    if (this.hasSentFestivalMessage(normalizedPhone, 'dussehra-2025')) {
+                        console.log(`🔄 Row ${index + 1}: Festival message already sent to ${phone}`);
+                        return;
+                    }
+                    
+                    processedNumbers.add(normalizedPhone);
+                    processedCustomers.push({ name, phone: normalizedPhone, originalPhone: phone });
+                });
+                
+                if (processedCustomers.length === 0) {
+                    return res.status(400).json({
+                        error: 'No valid customers found in data',
+                        timestamp: new Date().toISOString()
+                    });
+                }
+                
+                // Send initial response
+                res.json({
+                    success: true,
+                    message: 'Bulk Dussehra campaign started',
+                    validCustomers: processedCustomers.length,
+                    estimatedTime: `${(processedCustomers.length * delayMs / 1000).toFixed(0)} seconds`,
+                    note: 'Campaign is running in background. Check console for progress.',
+                    timestamp: new Date().toISOString()
+                });
+                
+                // Start sending messages in background
+                let successCount = 0;
+                let failCount = 0;
+                
+                // Send messages asynchronously
+                setTimeout(async () => {
+                    for (let i = 0; i < processedCustomers.length; i++) {
+                        const customer = processedCustomers[i];
+                        
+                        try {
+                            console.log(`📱 Processing: ${customer.name} (${customer.phone})`);
+                            
+                            // Generate personalized festival message with proper template
+                            const festivalMessage = `🙏 *नमस्ते ${customer.name} जी* 🙏
+
+🌺 *दुर्गा पूजा और दशहरा की हार्दिक शुभकामनाएं* 🌺
+
+इस पावन अवसर पर हम आपके और आपके पूरे परिवार की अच्छी सेहत और खुशहाली की प्रार्थना करते हैं। माँ दुर्गा आप सभी पर अपनी कृपा बनाए रखें। 🙏✨
+
+🎉 *इस दशहरे को बनाइए खास हमारे बेहतरीन ऑफर के साथ!* 🎉
+
+आप हमारे नियमित और प्रिय ग्राहक हैं, इसलिए आपके लिए विशेष *25% की छूट*:
+
+💰 *विशेष ऑफर:*
+▪️ ₹1000 की खरीदारी पर सीधे ₹250 की छूट 
+▪️ ₹2000 की खरीदारी पर सीधे ₹500 की छूट
+▪️ कोई छुपी हुई शर्तें नहीं, सीधी सादी छूट!
+
+📅 *ऑफर की अवधि:*
+30 सितंबर से 2 अक्टूबर तक (केवल 3 दिन)
+आप इस दौरान कभी भी आ सकते हैं।
+
+🎯 *यह ऑफर केवल आपके लिए उपलब्ध रहेगा!*
+
+📍 *RS Tailor & Fabric*
+Main Market, Kumher
+📞 *संपर्क:* 8824781960
+⏰ *समय:* सुबह 10 से रात 8 बजे
+
+जय माता दी! 🚩
+धन्यवाद! 🙏`;
+                            
+                            console.log(`📝 Message prepared for: ${customer.name}`);
+                            
+                            // Send video with festival message caption
+                            const result = await this.whatsappClient.sendVideoMessage(
+                                customer.phone,
+                                './media/videos/festival-promo.mp4',
+                                festivalMessage
+                            );
+                            
+                            if (result && result.success !== false) {
+                                console.log(`✅ SUCCESS: Festival message with video sent to ${customer.name} (${customer.phone})`);
+                                
+                                // Record festival message in persistent storage to prevent duplicates
+                                this.recordFestivalMessage(customer.phone, 'dussehra-2025');
+                                
+                                successCount++;
+                            } else {
+                                console.log(`❌ FAILED: ${customer.name} (${customer.phone})`);
+                                failCount++;
+                            }
+                            
+                        } catch (error) {
+                            console.log(`❌ ERROR: ${customer.name} (${customer.phone}) - ${error.message}`);
+                            failCount++;
+                        }
+                        
+                        // Random delay between 10-120 seconds
+                        if (i < processedCustomers.length - 1) {
+                            const randomDelay = Math.floor(Math.random() * (120 - 10 + 1)) + 10; // Random between 10-120 seconds
+                            console.log(`⏳ Random delay: ${randomDelay} seconds before next message...`);
+                            await new Promise(resolve => setTimeout(resolve, randomDelay * 1000));
+                        }
+                    }
+                    
+                    console.log(`🎊 Campaign completed! Success: ${successCount}, Failed: ${failCount}`);
+                }, 100); // Start after 100ms
+                
+                console.log(`🎊 Campaign completed! Success: ${successCount}, Failed: ${failCount}`);
+                
+            } catch (error) {
+                logger.error('❌ Bulk campaign failed:', error);
+                res.status(500).json({
+                    error: 'Bulk campaign failed',
+                    details: error.message,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        });
+
+        // Serve the campaign interface
+        this.app.get('/', (req, res) => {
+            res.sendFile(path.join(__dirname, '..', 'campaign-interface.html'));
+        });
+
+        this.app.get('/campaign', (req, res) => {
+            res.sendFile(path.join(__dirname, '..', 'campaign-interface.html'));
+        });
+
         // 404 handler
         this.app.use('*', (req, res) => {
             res.status(404).json({
                 error: 'Endpoint not found',
                 path: req.originalUrl,
                 availableEndpoints: [
+                    'GET / (Campaign Interface)',
+                    'GET /campaign (Campaign Interface)',
                     'GET /api/health',
                     'POST /api/webhook/google-sheets',
                     'POST /api/test-send',
@@ -496,7 +1096,12 @@ class WhatsAppTailorBot {
                     'POST /api/test-send-video',
                     'POST /api/test-send-audio',
                     'GET /api/media/status',
-                    'POST /api/media/cleanup'
+                    'POST /api/media/cleanup',
+                    'POST /api/bulk-dussehra-campaign (Auto mode)',
+                    'POST /api/manual-dussehra-campaign (Manual approval mode)',
+                    'POST /api/next-manual-message',
+                    'POST /api/approve-manual-message',
+                    'POST /api/reject-manual-message'
                 ],
                 timestamp: new Date().toISOString()
             });

@@ -14,25 +14,31 @@ class DeveloperConfig {
             '916375623182'   // Developer phone 3
         ];
         
-        // Developer settings
+        // Developer settings - ALL RESTRICTIONS REMOVED FOR PROMOTIONAL CAMPAIGN
         this.settings = {
             // Bypass startup grace period for developer phones
             bypassStartupDelay: true,
             
-            // Bypass business hours check for developer phones
+            // Bypass business hours check for developer phones - NO TIME LIMITS
             bypassBusinessHours: true,
             
-            // Bypass daily/hourly limits for developer phones
+            // Bypass daily/hourly limits for developer phones - UNLIMITED SENDING
             bypassRateLimits: true,
             
-            // Bypass duplicate prevention for developer phones
+            // Bypass duplicate prevention for developer phones - ALLOW RESENDING
             bypassDuplicatePrevention: true,
             
-            // Bypass message type rules for developer phones
+            // Bypass message type rules for developer phones - ALL MESSAGE TYPES
             bypassMessageRules: true,
             
             // Enable detailed logging for developer phones
-            enableDetailedLogging: true
+            enableDetailedLogging: true,
+            
+            // NEW: Force allow all promotional messages regardless of any restrictions
+            allowPromotionalMessages: true,
+            
+            // NEW: Disable any time-based validations
+            disableTimeValidation: true
         };
         
         console.log('🔧 Developer Configuration initialized');

@@ -13,33 +13,41 @@ const logger = require('pino')({ level: process.env.LOG_LEVEL || 'info' });
 class MessageTemplates {
     constructor() {
         this.templates = {
-            // Core Order Templates
+            // PROMOTIONAL MESSAGES ONLY - Other templates commented out for festival campaign
+            
+            /*
+            // Core Order Templates - DISABLED for promotional campaign
             welcome: this.getWelcomeTemplate(),
             order_confirmation: this.getOrderConfirmationTemplate(),
             order_ready: this.getOrderReadyTemplate(),
             delivery_notification: this.getDeliveryNotificationTemplate(),
             
-            // Reminder Templates
+            // Reminder Templates - DISABLED for promotional campaign
             pickup_reminder: this.getPickupReminderTemplate(),
             payment_reminder: this.getPaymentReminderTemplate(),
             
-            // Fabric Templates
+            // Fabric Templates - DISABLED for promotional campaign
             fabric_welcome: this.getFabricWelcomeTemplate(),
             fabric_purchase: this.getFabricPurchaseTemplate(),
             fabric_payment_reminder: this.getFabricPaymentReminderTemplate(),
             
-            // Combined Templates
+            // Combined Templates - DISABLED for promotional campaign
             combined_order: this.getCombinedOrderTemplate(),
             
-            // Special Templates
-            pickup_complete: this.getPickupCompleteTemplate()
+            // Special Templates - DISABLED for promotional campaign
+            pickup_complete: this.getPickupCompleteTemplate(),
+            */
+            
+            // Festival Promotional Templates - ACTIVE
+            durga_puja_dussehra_offer: this.getDurgaPujaDussehraOfferTemplate()
         };
         
         // Template cache for performance
         this.templateCache = new Map();
         
-        console.log('✅ Optimized Message Templates initialized (Hindi only)');
-        console.log(`📝 Loaded ${Object.keys(this.templates).length} template types`);
+        console.log('🎉 PROMOTIONAL CAMPAIGN MODE - Festival Templates Only');
+        console.log(`📝 Active template types: ${Object.keys(this.templates).length} (Promotional Only)`);
+        console.log('🚫 Regular business templates are DISABLED for promotional campaign');
     }
 
     // Core Order Templates
@@ -335,6 +343,38 @@ Again Thank You
 Main Market, Kumher`;
     }
 
+    // Festival Promotional Templates
+    getDurgaPujaDussehraOfferTemplate() {
+        return `🙏 *नमस्ते {customer_name} जी* 🙏
+
+🌺 *दुर्गा पूजा और दशहरा की हार्दिक शुभकामनाएं* 🌺
+
+इस पावन अवसर पर हम आपके और आपके पूरे परिवार की अच्छी सेहत और खुशहाली की प्रार्थना करते हैं। माँ दुर्गा आप सभी पर अपनी कृपा बनाए रखें। 🙏✨
+
+🎉 *इस दशहरे को बनाइए खास हमारे बेहतरीन ऑफर के साथ!* 🎉
+
+आप हमारे नियमित और प्रिय ग्राहक हैं, इसलिए आपके लिए विशेष *25% की छूट*:
+
+💰 *विशेष ऑफर:*
+▪️ ₹1000 की खरीदारी पर सीधे ₹250 की छूट 
+▪️ ₹2000 की खरीदारी पर सीधे ₹500 की छूट
+▪️ कोई छुपी हुई शर्तें नहीं, सीधी सादी छूट!
+
+📅 *ऑफर की अवधि:*
+30 सितंबर से 2 अक्टूबर तक (केवल 3 दिन)
+आप इस दौरान कभी भी आ सकते हैं।
+
+🎯 *यह ऑफर केवल आपके लिए उपलब्ध रहेगा!*
+
+📍 *RS Tailor & Fabric*
+Main Market, Kumher
+📞 *संपर्क:* 8824781960
+⏰ *समय:* सुबह 10 से रात 8 बजे
+
+जय माता दी! 🚩
+धन्यवाद! 🙏`;
+    }
+
     // Template Processing Methods
     getTemplate(templateType) {
         if (!this.templates[templateType]) {
@@ -422,7 +462,10 @@ Main Market, Kumher`;
         return processedTemplate;
     }
 
-    // Public API Methods (compatible with existing code)
+    // PROMOTIONAL CAMPAIGN ONLY - Other methods commented out
+    
+    /*
+    // Public API Methods (compatible with existing code) - DISABLED for promotional campaign
     getWelcomeMessage(orderData) {
         return this.processTemplate('welcome', orderData);
     }
@@ -465,6 +508,12 @@ Main Market, Kumher`;
 
     getPickupCompleteMessage(orderData) {
         return this.processTemplate('pickup_complete', orderData);
+    }
+    */
+
+    // Festival Promotional Methods
+    getDurgaPujaDussehraOfferMessage(orderData) {
+        return this.processTemplate('durga_puja_dussehra_offer', orderData);
     }
 
     // Template Management Methods
